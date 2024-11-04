@@ -1,28 +1,19 @@
 [build-system]
-requires = ["setuptools"]  # REQUIRED if [build-system] table is used
-build-backend = "setuptools.build_meta"  # If not defined, then legacy behavior can happen.
-
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
-# This is the name of your project. The first time you publish this
-
 name = "SilicaAnimus" 
-
-# Versions should comply with PEP 440
-version = "0.0.1
-
+version = "0.0.1"
 description = "Le bot du serveur Discord de la voie du Thalos"
 
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = ["discord", "HelloAsso"]
 authors = [
-  {name = "Patator", email = lmpatator@gmail.com" }
+  {name = "Patator", email = "lmpatator@gmail.com" }
 ]
 
-# Classifiers help users find your project by categorizing it.
-#
-# For a list of valid classifiers, see https://pypi.org/classifiers/
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.8",
@@ -34,14 +25,11 @@ classifiers = [
 ]
 
 dependencies = [
-  "discord.py"
+  "discord.py",
+  "typer"
 ]
 
 [project.scripts]
-sample = "SilicaAnimus:SilicaAnimus"
+sample = "SilicaAnimus:main.py"
 
-# This is configuration specific to the `setuptools` build backend.
-# If you are using a different build backend, you will need to change this.
 [tool.setuptools]
-# If there are data files included in your packages that need to be
-# installed, specify them here.
