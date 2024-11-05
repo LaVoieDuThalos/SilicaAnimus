@@ -4,6 +4,7 @@ import typer
 import asyncio
 from functools import wraps
 
+from dotenv import load_dotenv
 from SilicaAnimus import SilicaAnimus
 
 def typer_async(f):
@@ -14,11 +15,12 @@ def typer_async(f):
     return wrapper
 
 @typer_async
-async def main(discord_token: str) -> None:
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+async def main() -> None:
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-        silica_animus = SilicaAnimus(discord_token=discord_token)
-        await silica_animus.run()
+    silica_animus = SilicaAnimus()
+    await silica_animus.run()
 
 if __name__ == "__main__":
+    load_dotenv()
     typer.run(main)

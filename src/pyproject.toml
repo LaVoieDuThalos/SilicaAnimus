@@ -26,7 +26,8 @@ classifiers = [
 
 dependencies = [
   "discord.py",
-  "typer"
+  "typer",
+  "python-dotenv"
 ]
 
 [project.scripts]
