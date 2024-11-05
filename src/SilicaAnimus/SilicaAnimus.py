@@ -1,5 +1,8 @@
 import logging
+import asyncio
+
 from DiscordClient import DiscordClient
+from HelloAssoClient import HelloAssoClient
 
 class SilicaAnimus:
     def __init__(self, discord_token : str):
@@ -10,11 +13,15 @@ class SilicaAnimus:
         """
         self.logger = logging.getLogger(__name__)
         self.discord_client = DiscordClient(discord_token)
+        self.helloasso_client = HelloAssoClient("")
 
-    def run(self) -> bool:
+    async def run(self) -> bool:
         """Run the discord client
         """
         self.logger.info("Running...")
-        self.discord_client.run()
+
+        async with asyncio.TaskGroup() as tg:
+            discord_task = tg.create_task(self.discord_client.start())
+            helloasso_task = tg.create_task(self.helloasso_client.start())
 
         return True

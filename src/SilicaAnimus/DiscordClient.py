@@ -31,14 +31,15 @@ class DiscordClient:
             if message.content.startswith('$bonjour'):
                 await message.channel.send('Bonjour!')
 
-    def run(self) -> bool:
+    async def start(self) -> bool:
         """Starts the bot
 
         Args:
             token (str): Discord API authentification token
         """
-        self.client.run(self.token)
+
         self.logger.info("Running...")
+        await self.client.start(self.token)
 
         return True
 
