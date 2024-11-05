@@ -15,7 +15,7 @@ def typer_async(f):
 
 @typer_async
 async def main(discord_token: str) -> None:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
         silica_animus = SilicaAnimus(discord_token=discord_token)
         await silica_animus.run()
