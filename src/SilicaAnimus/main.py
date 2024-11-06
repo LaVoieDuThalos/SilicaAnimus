@@ -5,7 +5,7 @@ import asyncio
 from functools import wraps
 
 from dotenv import load_dotenv
-from SilicaAnimus import SilicaAnimus
+from silica_animus import SilicaAnimus
 
 def typer_async(f):
     @wraps(f)

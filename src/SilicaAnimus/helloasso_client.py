@@ -6,12 +6,20 @@ CALLS_URL =  "https://api.helloasso-sandbox.com/v5"
 
 class HelloAssoClient:
     def __init__(self, client_id: str, client_secret: str):
+        """_summary_
+
+        Args:
+            client_id (str): HelloAsso API association OAuth2 client_id
+            client_secret (str): HelloAsso API association OAuth2 client_secret
+        """
         self.logger = logging.getLogger(__name__)
         self.client_id = client_id
         self.client_secret = client_secret
         self.refresh_token = None
 
     async def start(self):
+        """Starts the client
+        """
         self.logger.info("Running...")
 
         token_request_data = parse.urlencode({"client_id": self.client_id,
@@ -24,6 +32,15 @@ class HelloAssoClient:
         with request.urlopen(token_request) as resp:
             print(resp)
             pass
+
+        return
+
+    async def close(self):      
+        """Stops the client
+        """
+        pass
+
+        return
 
 
         

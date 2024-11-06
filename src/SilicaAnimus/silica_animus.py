@@ -2,8 +2,8 @@ import logging
 import asyncio
 from os import getenv
 
-from DiscordClient import DiscordClient
-from HelloAssoClient import HelloAssoClient
+from discord_client import DiscordClient
+from helloasso_client import HelloAssoClient
 
 class SilicaAnimus:
     def __init__(self):

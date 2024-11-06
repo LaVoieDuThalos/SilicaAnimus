@@ -75,3 +75,16 @@ class DiscordClient:
 
         return True
 
+    async def close(self) -> bool:
+        """Stops the bot
+
+        Args:
+            token (str): Discord API authentification token
+        """
+
+        self.logger.info("Closing...")
+        await self.client.close()
+        self.logger.info("Closed...")
+
+        return True
+
