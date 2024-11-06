@@ -5,6 +5,7 @@ import pytest
 from SilicaAnimus.discord_client import DiscordClient
 
 pytest_plugins = ('pytest_asyncio',)
+
 @pytest.mark.asyncio
 async def test_discord_client_connection() -> bool:
     load_dotenv()

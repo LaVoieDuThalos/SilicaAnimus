@@ -22,6 +22,8 @@ class DiscordClient:
         self.thalos_guild = None
         self.thalos_role = None
 
+        self.start_future = None
+
         # Events 
         @self.client.event
         async def on_ready() -> None:
@@ -71,7 +73,7 @@ class DiscordClient:
         """
 
         self.logger.info("Running...")
-        await self.client.start(self.token)
+        self.start_future = self.client.start(self.token)
 
         return True
 
@@ -84,6 +86,7 @@ class DiscordClient:
 
         self.logger.info("Closing...")
         await self.client.close()
+        await self.start_future
         self.logger.info("Closed...")
 
         return True
