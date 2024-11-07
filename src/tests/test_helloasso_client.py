@@ -15,15 +15,10 @@ def setup_function(function):
 
 @pytest.mark.asyncio
 async def test_helloasso_client_connection() -> bool:
-
-    load_dotenv()
     client = HelloAssoClient(client_id=getenv("HELLOASSO_CLIENT_ID"), client_secret=getenv("HELLOASSO_CLIENT_SECRET"))
-    future = client.start()
-    print("a")
+    future = asyncio.create_task(client.start())
     await asyncio.sleep(1)
-    print("b")
     await client.close()
-    print("c")
     await future
     return True
 

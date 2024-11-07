@@ -77,7 +77,7 @@ class DiscordClient:
         Args:
             token (str): Discord API authentification token
         """
-
+        self.logger.info("Starting...")
         self.start_future = asyncio.create_task(self.client.start(self.token))
         self.logger.info("Running...")
 
@@ -86,6 +86,7 @@ class DiscordClient:
 
         await self.client.close() 
         await self.start_future
+        self.logger.info("Closed")
 
         return True
 
