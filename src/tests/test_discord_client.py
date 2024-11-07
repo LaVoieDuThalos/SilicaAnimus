@@ -1,6 +1,7 @@
 from os import getenv
 from dotenv import load_dotenv
 import pytest
+import asyncio
 
 from SilicaAnimus.discord_client import DiscordClient
 
@@ -11,6 +12,7 @@ async def test_discord_client_connection() -> bool:
     load_dotenv()
     client = DiscordClient(getenv("DISCORD_TOKEN"))
     await client.start()
+    await asyncio.sleep(5)
     await client.close()
 
     return True
