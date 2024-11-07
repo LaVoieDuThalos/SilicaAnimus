@@ -1,6 +1,8 @@
 import discord
 import logging
 from os import getenv
+from typing import Union
+import asyncio
 
 class DiscordClient:
     """The Discord client class
@@ -22,6 +24,8 @@ class DiscordClient:
 
         self.start_future = None
 
+        self.run = True
+
         # Events 
         @self.client.event
         async def on_ready() -> None:
@@ -39,9 +43,13 @@ class DiscordClient:
 
     async def process_dm(self, message) -> None:           
         if self.thalos_guild is None: 
-            self.thalos_guild = self.client.get_guild(getenv("THALOS_GUILD_ID"))
-            self.thalos_role = self.thalos_guild.get_role(getenv("MEMBER_ROLE_ID"))
-        
+            self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
+            if not self.thalos_guild is None:
+                self.thalos_role = self.thalos_guild.get_role(int(getenv("MEMBER_ROLE_ID")))
+            else:
+                self.logger.warning(f"Could not get the member role")
+                return
+
         members = self.thalos_guild.members
         member = self.thalos_guild.get_member(message.author.id)
         if member is None:
@@ -70,21 +78,23 @@ class DiscordClient:
             token (str): Discord API authentification token
         """
 
+        self.start_future = asyncio.create_task(self.client.start(self.token))
         self.logger.info("Running...")
-        self.start_future = self.client.start(self.token)
+
+        while self.run:
+            await asyncio.sleep(1)
+
+        await self.client.close() 
+        await self.start_future
 
         return True
 
     async def close(self) -> bool:
         """Stops the bot
-
-        Args:
-            token (str): Discord API authentification token
         """
 
         self.logger.info("Closing...")
-        await self.client.close()
-        await self.start_future
+        self.run = False
         self.logger.info("Closed...")
 
         return True
