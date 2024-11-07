@@ -1,8 +1,6 @@
 import logging 
 from urllib import request, parse
-
-TOKEN_URL = "https://api.helloasso-sandbox.com/oauth2/token"
-CALLS_URL =  "https://api.helloasso-sandbox.com/v5"
+from os import getenv
 
 class HelloAssoClient:
     def __init__(self, client_id: str, client_secret: str):
@@ -26,7 +24,7 @@ class HelloAssoClient:
                                               "client_secret": self.client_secret,
                                               "grant_type": "client_credentials"})
         token_request_data = token_request_data.encode()
-        token_request = request.Request(url=TOKEN_URL, data=token_request_data, method='POST')
+        token_request = request.Request(url=getenv("HELLOASSO_TOKEN_URL"), data=token_request_data, method='POST')
         token_request.add_header('Content-Type', 'application/x-www-form-urlencoded')
         self.logger.info("Getting token")
         with request.urlopen(token_request) as resp:

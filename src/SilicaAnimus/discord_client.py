@@ -1,8 +1,6 @@
 import discord
 import logging
-
-MEMBER_ROLE_ID = 678922012109963294
-THALOS_GUILD_ID = 677657875736166410
+from os import getenv
 
 class DiscordClient:
     """The Discord client class
@@ -41,8 +39,8 @@ class DiscordClient:
 
     async def process_dm(self, message) -> None:           
         if self.thalos_guild is None: 
-            self.thalos_guild = self.client.get_guild(THALOS_GUILD_ID)
-            self.thalos_role = self.thalos_guild.get_role(MEMBER_ROLE_ID)
+            self.thalos_guild = self.client.get_guild(getenv("THALOS_GUILD_ID"))
+            self.thalos_role = self.thalos_guild.get_role(getenv("MEMBER_ROLE_ID"))
         
         members = self.thalos_guild.members
         member = self.thalos_guild.get_member(message.author.id)
