@@ -43,7 +43,12 @@ class DiscordClient:
             if message.channel.type == discord.ChannelType.private:
                 await self.process_dm(message)
 
-    async def process_dm(self, message) -> None:
+    async def process_dm(self, message: discord.Message) -> None:
+        """Process the DMs received by the bot and takes associated actions
+
+        Args:
+            message (discord.Messag): _description_
+        """
         if self.thalos_guild is None:
             self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
             if not self.thalos_guild is None:
