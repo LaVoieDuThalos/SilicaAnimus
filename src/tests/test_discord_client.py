@@ -7,11 +7,13 @@ import sys
 
 from SilicaAnimus.discord_client import DiscordClient
 
-pytest_plugins = ('pytest_asyncio',)
+pytest_plugins = ("pytest_asyncio",)
+
 
 def setup_function(function):
     load_dotenv()
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
 
 @pytest.mark.asyncio
 async def test_discord_client_connection() -> bool:
@@ -21,6 +23,7 @@ async def test_discord_client_connection() -> bool:
     await client.close()
     await future
     return True
+
 
 if __name__ == "__main__":
     setup_function(test_discord_client_connection)
