@@ -33,7 +33,7 @@ class DiscordClient:
 
         @self.client.event
         async def on_message(message) -> None:
-            self.logger.debug(f"message {message.content} received from {message.author}")
+            self.logger.debug(f"a message {message.content} received from {message.author}")
 
             if message.author == self.client.user:
                 return
