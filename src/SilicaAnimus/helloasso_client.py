@@ -28,13 +28,7 @@ class HelloAssoClient:
         self.run = True
 
     @staticmethod
-    def get_basic_headers() -> dict:
-        """Utility function to define the basic headers for any HTTPS request
-
-        Returns:
-            dict: The headers dict
-        """
-
+    def get_basic_headers():
         headers = {
             "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)"
         }
