@@ -28,13 +28,24 @@ class HelloAssoClient:
         self.run = True
 
     @staticmethod
-    def get_basic_headers():
+    def get_basic_headers() -> dict:
+        """Utility function to define the basic headers for any HTTPS request
+
+        Returns:
+            dict: The headers dict
+        """
+
         headers = {
             "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)"
         }
         return headers
 
     async def get_access_token(self) -> bool:
+        """Get the access token from the authentifaction endpoint
+
+        Returns:
+            bool: True if it managed to get the token
+        """
         token_request_data = parse.urlencode(
             {
                 "client_id": self.client_id,
@@ -69,6 +80,12 @@ class HelloAssoClient:
         return True
 
     async def refresh_token(self) -> bool:
+        """Refresh the token
+
+        Returns:
+            bool: True if it managed to refresh the token
+        """
+
         token_request_data = parse.urlencode(
             {
                 "client_id": self.client_id,
@@ -105,6 +122,7 @@ class HelloAssoClient:
 
     async def start(self) -> bool:
         """Starts the client"""
+
         self.logger.info("Running...")
         self.run = True
         await self.get_access_token()
