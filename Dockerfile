@@ -29,6 +29,10 @@ RUN mkdir /home/animus/code
 WORKDIR /home/animus/code
 COPY src/ .
 
+# on s'assu de ne pas coller le fichier .env contenant les secrets dans l'image Docker
+# il faut alors utiliser un volume sur le .env au lancement du container : -v .env:/home/animus/SilicaAnimus/.env
+RUN rm -f SilicaAnimus/.env
+
 # make sure all messages always reach console
 ENV PYTHONUNBUFFERED=1
 
