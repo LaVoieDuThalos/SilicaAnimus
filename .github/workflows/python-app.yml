@@ -40,3 +40,24 @@ jobs:
         echo "DISCORD_TOKEN='test'" >> .env
         echo "HELLOASSO_CLIENT_SECRET='test'" >> .env
         pytest
+  dast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          cd src
+          pip install .
+
+      - name: Scan Security issues
+        uses: ShiftLeftSecurity/scan-action@master
+        with:
+          type: "credscan,python,depscan"
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v1
+        with:
+          name: reports
+          path: reports
