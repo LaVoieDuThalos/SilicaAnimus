@@ -1,8 +1,35 @@
 import discord
+from discord.ext import commands
 import logging
+
 from os import getenv
 from typing import Union
+
 import asyncio
+
+logger = logging.getLogger(__name__)
+
+def is_admin(ctx):
+    logger.info('Checking if the command caller is admin')
+    admin_role = ctx.guild.get_role(int(getenv('ADMIN_ROLE_ID')))
+    return admin_role in ctx.author.roles
+
+class AdminCog(commands.Cog):
+    """ Commands used to administrate the Discord"""
+
+    @commands.command()
+    @commands.check(is_admin)
+    async def give_role(self, ctx, *arg, **kwargs):
+        """ This command give role to a user or to a group of users """
+        await ctx.channel.send('Giving role...')
+
+    @commands.command()
+    async def pin_me_this(self, ctx, *args, **kwargs):
+        """ This command pin the last message in the channel or the answered
+        message
+        """
+        pass
+
 
 class DiscordClient:
     """The Discord client class
@@ -15,8 +42,8 @@ class DiscordClient:
         self.intents.members = True
         self.intents.guilds = True
 
-        self.client = discord.Client(intents=self.intents)
-        self.logger = logging.getLogger(__name__)
+        self.client = commands.Bot(command_prefix = '!', intents=self.intents)
+        self.logger = logger
 
         self.token = token
         self.thalos_guild = None
@@ -26,13 +53,26 @@ class DiscordClient:
 
         self.run = True
 
+        # Commands
+        @self.client.command()
+        async def ping(ctx):
+            await ctx.channel.send('pong')
+
+        @self.client.command()
+        async def echo(ctx, *args):
+            await ctx.channel.send(' '.join(args))
+
+
         # Events 
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+            await self.client.add_cog(AdminCog())
+            self.logger.info("Admin commands added")
 
         @self.client.event
         async def on_message(message) -> None:
+            await self.client.process_commands(message)
             self.logger.debug(f"a message {message.content} received from {message.author}")
 
             if message.author == self.client.user:

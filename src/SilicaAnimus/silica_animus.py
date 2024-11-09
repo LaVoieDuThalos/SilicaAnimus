@@ -23,6 +23,6 @@ class SilicaAnimus:
 
         async with asyncio.TaskGroup() as tg:
             discord_task = tg.create_task(self.discord_client.start())
-            helloasso_task = tg.create_task(self.helloasso_client.start())
+            #helloasso_task = tg.create_task(self.helloasso_client.start())
 
         return True
