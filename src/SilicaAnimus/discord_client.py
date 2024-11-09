@@ -12,28 +12,33 @@ from typing import Union
 
 import asyncio
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('silica_animus')
 
-def is_admin(ctx):
-    logger.info('Checking if the command caller is admin')
-    admin_role = ctx.guild.get_role(int(getenv('ADMIN_ROLE_ID')))
-    return admin_role in ctx.author.roles
+load_dotenv()
+
+@commands.check
+def custom_pinners(ctx):
+    return False
 
 class AdminCog(commands.Cog):
     """ Commands used to administrate the Discord"""
 
     @commands.command()
-    @commands.check(is_admin)
+    @commands.has_role(int(getenv('ADMIN_ROLE_ID')))
     async def give_role(self, ctx, *arg, **kwargs):
         """ This command give role to a user or to a group of users """
+        logger.info('Running give_role command')
         await ctx.channel.send('Giving role...')
 
     @commands.command()
-    async def pin_me_this(self, ctx, *args, **kwargs):
+    @commands.check_any(commands.has_permissions(manage_messages=True),
+                        custom_pinners)
+    async def pin(self, ctx, *args, **kwargs):
         """ This command pin the last message in the channel or the answered
         message
         """
-        pass
+        logger.info('Running pin command')
+        await ctx.channel.send("I'm pinning the message")
 
 
 class DiscordClient:
@@ -68,6 +73,10 @@ class DiscordClient:
         @self.client.command()
         async def echo(ctx, *args):
             await ctx.channel.send(' '.join(args))
+
+        @self.client.command()
+        async def my_roles(ctx):
+            await ctx.channel.send(str(ctx.author.roles))
 
 
         # Events 
