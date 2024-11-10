@@ -23,7 +23,7 @@ class HelloAssoClient:
         self.refresh_token = None
         self.token_expiration_time = None
 
-        self.refresh_token_handle = None
+        self.refresh_token_handle: asyncio.TimerHandle = None
 
         self.run = True
 
@@ -74,23 +74,23 @@ class HelloAssoClient:
             self.token_expiration_time = resp_values["expires_in"]
 
             self.refresh_token_handle = asyncio.get_event_loop().call_later(
-                self.token_expiration_time - 60, self.get_access_token
+                5, self.refresh_access_token
             )
 
         self.logger.info("Token gotten succesfully")
         return True
 
-    async def refresh_token(self) -> bool:
+    def refresh_access_token(self) -> bool:
         """Refresh the token
 
         Returns:
             bool: True if it managed to refresh the token
         """
 
+        self.logger.info("Refreshing token")
         token_request_data = parse.urlencode(
             {
-                "client_id": self.client_id,
-                "client_secret": self.refresh_token,
+                "refresh_token": self.refresh_token,
                 "grant_type": "refresh_token",
             }
         )
@@ -104,7 +104,6 @@ class HelloAssoClient:
         )
         token_request.add_header("Content-Type", "application/x-www-form-urlencoded")
 
-        self.logger.info("Refreshing token")
         resp: HTTPResponse
         with request.urlopen(token_request) as resp:
             if resp.status != 200:
@@ -116,10 +115,10 @@ class HelloAssoClient:
             self.token_expiration_time = resp_values["expires_in"]
 
             self.refresh_token_handle = asyncio.get_event_loop().call_later(
-                self.token_expiration_time - 60, self.get_access_token
+                self.token_expiration_time - 60, self.refresh_access_token
             )
 
-        self.logger.info("Token refreshed")
+        self.logger.info("Access token refreshed")
         return True
 
     async def get_membership(self, first_name: str, last_name: str) -> bool:
