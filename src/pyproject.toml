@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "SilicaAnimus" 
+name = "SilicaAnimus"
 version = "0.0.1"
 description = "Le bot du serveur Discord de la voie du Thalos"
 
@@ -29,7 +29,8 @@ dependencies = [
   "typer",
   "python-dotenv",
   "pytest",
-  "pytest-asyncio"
+  "pytest-asyncio",
+  "pre-commit"
 ]
 
 [project.scripts]

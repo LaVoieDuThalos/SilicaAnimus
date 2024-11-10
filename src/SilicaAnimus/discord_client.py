@@ -1,7 +1,6 @@
 import discord
 import logging
 from os import getenv
-from typing import Union
 import asyncio
 
 
@@ -51,22 +50,21 @@ class DiscordClient:
         """
         if self.thalos_guild is None:
             self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
-            if not self.thalos_guild is None:
+            if self.thalos_guild is not None:
                 self.thalos_role = self.thalos_guild.get_role(
                     int(getenv("MEMBER_ROLE_ID"))
                 )
             else:
-                self.logger.warning(f"Could not get the member role")
+                self.logger.warning("Could not get the member role")
                 return
 
-        members = self.thalos_guild.members
         member = self.thalos_guild.get_member(message.author.id)
         if member is None:
             self.logger.info(
                 f"{message.author.name} dm'd the bot but is not in the server"
             )
             await message.channel.send(
-                f"Ce bot n'a d'interêt que si vous êtes membre du serveur du thalos !"
+                "Ce bot n'a d'interêt que si vous êtes membre du serveur du thalos !"
             )
             return
 
@@ -81,7 +79,7 @@ class DiscordClient:
 
         if message.content.startswith("thalosien"):
             self.logger.info(f"{message.author.name} tried to get the role")
-            await message.channel.send(f"Bientôt implémenté !")
+            await message.channel.send("Bientôt implémenté !")
             return
 
         self.logger.info(f"{message.author.name} dm'd the bot with a random message")
