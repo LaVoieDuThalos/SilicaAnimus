@@ -1,11 +1,9 @@
 import discord
 from discord.ext import commands
-from discord.ext import commands
 import logging
 
 
 from os import getenv
-from dotenv import load_dotenv
 from dotenv import load_dotenv
 from typing import Union
 
