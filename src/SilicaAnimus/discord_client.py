@@ -1,8 +1,36 @@
 import discord
+from discord.ext import commands
 import logging
 from os import getenv
 import asyncio
 from event import Event
+
+logger = logging.getLogger("silica_animus")
+
+
+@commands.check
+def custom_pinners(ctx):
+    return False
+
+
+class AdminCog(commands.Cog):
+    """Commands used to administrate the Discord"""
+
+    @commands.command()
+    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
+    async def give_role(self, ctx, *arg, **kwargs):
+        """This command give role to a user or to a group of users"""
+        logger.info("Running give_role command")
+        await ctx.channel.send("Giving role...")
+
+    @commands.command()
+    @commands.check_any(commands.has_permissions(manage_messages=True), custom_pinners)
+    async def pin(self, ctx, *args, **kwargs):
+        """This command pin the last message in the channel or the answered
+        message
+        """
+        logger.info("Running pin command")
+        await ctx.channel.send("I'm pinning the message")
 
 
 class DiscordClient:
@@ -16,8 +44,8 @@ class DiscordClient:
         self.intents.guilds = True
         self.intents.dm_messages = True
 
-        self.client = discord.Client(intents=self.intents)
-        self.logger = logging.getLogger(__name__)
+        self.client = commands.Bot(command_prefix="!", intents=self.intents)
+        self.logger = logger
 
         self.token = token
         self.thalos_guild = None
@@ -26,13 +54,29 @@ class DiscordClient:
         self.start_future = None
         self.run = True
 
+        # Commands
+        @self.client.command()
+        async def ping(ctx):
+            await ctx.channel.send("pong")
+
+        @self.client.command()
+        async def echo(ctx, *args):
+            await ctx.channel.send(" ".join(args))
+
+        @self.client.command()
+        async def my_roles(ctx):
+            await ctx.channel.send(str(ctx.author.roles))
+
         # Events
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+            await self.client.add_cog(AdminCog())
+            self.logger.info("Admin commands added")
 
         @self.client.event
         async def on_message(message) -> None:
+            await self.client.process_commands(message)
             self.logger.debug(
                 f"message {message.content} received from {message.author}"
             )
@@ -76,7 +120,11 @@ class DiscordClient:
             self.logger.info(f"{message.author.name} tried to get the role")
             content = message.content.split(" ")
             await self.membership_request(
-                first_name=content[1], last_name=content[2], user_id=message.author.id, message_back=True, add_role=True
+                first_name=content[1],
+                last_name=content[2],
+                user_id=message.author.id,
+                message_back=True,
+                add_role=True,
             )
             return
 
@@ -129,9 +177,7 @@ class DiscordClient:
         await self.populate_guild_data()
         member = self.thalos_guild.get_member(user_id)
         if member is None:
-            self.logger.warning(
-                f"User {user_id} could not be found"
-            )
+            self.logger.warning(f"User {user_id} could not be found")
 
         return member
 
@@ -142,16 +188,16 @@ class DiscordClient:
         member = await self.get_member(user_id=user_id)
         if member is None:
             member = self.client.get_user(user_id)
-            if kwargs['message_back']:
+            if kwargs["message_back"]:
                 member.send("Quelquechose a cassé... Contact les admins du serveur")
             self.logger.error(
                 f"{first_name} {last_name} got checked for membership but is not in the server anymore ?!"
             )
             return
 
-        if kwargs['add_role']:
+        if kwargs["add_role"]:
             await member.add_roles(self.thalos_role)
-        if kwargs['message_back']:
+        if kwargs["message_back"]:
             await member.send("Tu es maintenant membre sur le serveur !")
         self.logger.info(f"{first_name} {last_name} now has the thalos member role")
 
@@ -163,14 +209,14 @@ class DiscordClient:
         member = await self.get_member(user_id)
         if member is None:
             member = self.client.get_user(user_id)
-            if kwargs['message_back']:
+            if kwargs["message_back"]:
                 member.send("Quelquechose a cassé... Contact les admins du serveur")
             self.logger.error(
                 f"{first_name} {last_name} got checked for membership but is not in the server anymore ?!"
             )
             return
 
-        if kwargs['messageBack']:
+        if kwargs["messageBack"]:
             await member.send(
                 "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
             )

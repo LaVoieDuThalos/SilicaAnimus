@@ -58,7 +58,26 @@ class HelloAssoClient:
                 "grant_type": "client_credentials",
             }
         )
+        """Get the access token from the authentifaction endpoint
+
+        Returns:
+            bool: True if it managed to get the token
+        """
+        token_request_data = parse.urlencode(
+            {
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "grant_type": "client_credentials",
+            }
+        )
         token_request_data = token_request_data.encode()
+        token_request = request.Request(
+            url=getenv("HELLOASSO_TOKEN_URL"),
+            data=token_request_data,
+            headers=HelloAssoClient.get_basic_headers(),
+            method="POST",
+        )
+        token_request.add_header("Content-Type", "application/x-www-form-urlencoded")
         token_request = request.Request(
             url=getenv("HELLOASSO_TOKEN_URL"),
             data=token_request_data,
