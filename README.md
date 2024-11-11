@@ -14,5 +14,5 @@ docker build -t silicaanimus:0.0.1 .
 Pour démarrer l'image Docker du bot avec le fichier .env :
 
 ```bash
-docker run -v ./src/SilicaAnimus/.env:/home/animus/code/SilicaAnimus/.env -it silicaanimus:0.0.1
+docker run -it --env-file .env silicaanimus:0.0.1
 ```
