@@ -17,7 +17,9 @@ def setup_function(function):
 
 @pytest.mark.asyncio
 async def test_discord_client_connection() -> bool:
-    client = DiscordClient(getenv("DISCORD_TOKEN"))
+    client = DiscordClient(
+        getenv("DISCORD_TOKEN"), helloasso_client=None, gsheet_client=None
+    )
     future = asyncio.create_task(client.start())
     await asyncio.sleep(5)
     await client.close()

@@ -6,7 +6,8 @@ import logging
 from os import getenv
 import asyncio
 
-from helloasso_client import HelloAssoClient
+from SilicaAnimus.helloasso_client import HelloAssoClient
+from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
 
 
 @commands.check
@@ -65,7 +66,12 @@ class AdminCog(commands.Cog):
 class DiscordClient:
     """The Discord client class"""
 
-    def __init__(self, token: str, helloasso_client: HelloAssoClient):
+    def __init__(
+        self,
+        token: str,
+        helloasso_client: HelloAssoClient,
+        gsheet_client: GoogleSheetsClient,
+    ):
         """_summary_"""
         self.intents = discord.Intents.default()
         self.intents.message_content = True
@@ -74,6 +80,7 @@ class DiscordClient:
         self.intents.dm_messages = True
 
         self.helloasso_client = helloasso_client
+        self.gsheet_client = gsheet_client
 
         self.client = commands.Bot(command_prefix="!", intents=self.intents)
         self.logger = logging.getLogger(__name__)
@@ -146,17 +153,18 @@ class DiscordClient:
             return
 
         if message.content.startswith("thalosien"):
-            self.logger.info(f"{message.author.name} tried to get the role")
             content = message.content.split(" ")
-            is_member = await self.helloasso_client.get_membership(
-                first_name=content[1],
-                last_name=content[2],
-            )
+            if len(content) < 3:
+                await message.channel.send(
+                    f'Bonjour {message.author.name}. Pour avoir le rôle membre, tapez "thalosien Prénom Nom ". Le bot va vérifier votre adhésion.'
+                )
+                return
 
-            if is_member:
-                await self.set_membership(member)
-            else:
-                await self.deny_membership(member)
+            first_name, last_name = content[1], content[2]
+            self.logger.info(f"{message.author.name} tried to get the role")
+            await self.process_membership(
+                member=member, first_name=first_name, last_name=last_name
+            )
             return
 
         self.logger.info(f"{message.author.name} dm'd the bot with a random message")
@@ -221,12 +229,91 @@ class DiscordClient:
 
         return member
 
-    async def set_membership(self, member: discord.Member) -> None:
+    async def process_membership(
+        self, member: discord.Member, first_name: str, last_name: str
+    ) -> None:
+        async with asyncio.TaskGroup() as tg:
+            ha_task = tg.create_task(
+                self.helloasso_client.get_membership(
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+            )
+
+            real_name_gsheet_task = tg.create_task(
+                self.gsheet_client.get_member_by_name(
+                    first_name=first_name, last_name=last_name
+                )
+            )
+
+            discord_name_gsheet_task = tg.create_task(
+                self.gsheet_client.get_member_by_discord_name(discord_name=member.name)
+            )
+
+        is_member = ha_task.result()
+        real_name_member_info: MemberInfo = real_name_gsheet_task.result()
+        discord_name_member_info: MemberInfo = discord_name_gsheet_task.result()
+
+        if not is_member:
+            self.logger.info(
+                f"{first_name} {last_name} got denied the role, not a HelloAsso member"
+            )
+            await member.send(
+                "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
+            )
+            return
+
+        if discord_name_member_info.in_spreadsheet and (
+            discord_name_member_info.first_name.lower() != first_name.lower()
+            or discord_name_member_info.last_name.lower() != last_name.lower()
+        ):
+            self.logger.info(
+                f"{member.name} got denied the role with {first_name} {last_name}, "
+                "this discord name is already associated with {discord_name_member_info.first_name}, {discord_name_member_info.last_name}"
+            )
+            await member.send(
+                "Ce compte est associé à un autre nom. Contactez un admin."
+            )
+            return
+
+        if (
+            real_name_member_info.in_spreadsheet
+            and real_name_member_info.discord_nickname.lower() != member.name
+        ):
+            self.logger.info(
+                f"{member.name} got denied the role with {first_name} {last_name}, "
+                "this discord name is already associated with {discord_name_member_info.discord_nickname}"
+            )
+            await member.send(
+                "Ce nom est associé à un autre pseudo discord. Contactez un admin."
+            )
+            return
+
+        await self.set_membership(member, first_name, last_name)
+
+    async def set_membership(
+        self, member: discord.Member, first_name: str, last_name: str
+    ) -> None:
+        """Set the membership on discord and updates the spreadsheet
+
+        Args:
+            member (discord.Member): Discord guild member information
+            first_name (str): First name of the member
+            last_name (str): Last name of the member
+        """
         await member.add_roles(self.thalos_role)
         await member.send("Tu es maintenant membre sur le serveur !")
         self.logger.info(f"{member.name} now has the thalos member role")
 
-    async def deny_membership(self, member: discord.Member) -> None:
-        await member.send(
-            "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
+        member_info = MemberInfo(
+            first_name=first_name,
+            last_name=last_name,
+            discord_nickname=member.name,
+            server_nickname=member.display_name,
         )
+
+        ret = await self.gsheet_client.add_member(member_info)
+        if not ret:
+            self.logger.error(f"Could not add {member_info} to spreadsheet")
+
+        self.logger.info(f"{member_info} added to spreadsheet")

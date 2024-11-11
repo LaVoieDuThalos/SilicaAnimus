@@ -30,7 +30,7 @@ dependencies = [
   "python-dotenv",
   "pytest",
   "pytest-asyncio",
-  "pre-commit"
+  "pre-commit",
 ]
 
 [project.scripts]
