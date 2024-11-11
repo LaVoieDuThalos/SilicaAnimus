@@ -4,6 +4,7 @@ from os import getenv
 from http.client import HTTPResponse
 import json
 import asyncio
+from event import Event
 
 
 class HelloAssoClient:
@@ -26,6 +27,9 @@ class HelloAssoClient:
         self.refresh_token_handle: asyncio.TimerHandle = None
 
         self.run = True
+
+        # Events
+        self.is_member = Event()
 
     @staticmethod
     def get_basic_headers() -> dict:
@@ -121,7 +125,9 @@ class HelloAssoClient:
         self.logger.info("Access token refreshed")
         return True
 
-    async def get_membership(self, first_name: str, last_name: str) -> bool:
+    async def get_membership(
+        self, first_name: str, last_name: str, user_id: int
+    ) -> bool:
         """Check if a person is a current member of the association
 
         Returns:
@@ -166,6 +172,7 @@ class HelloAssoClient:
                     and last_name.lower() == payer["lastName"].lower()
                 ):
                     self.logger.info(f"{first_name} {last_name} is a member")
+                    await self.is_member(first_name, last_name, user_id)
                     return True
 
             self.logger.info(f"{first_name} {last_name} is not a member")

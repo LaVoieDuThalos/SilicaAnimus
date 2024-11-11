@@ -19,6 +19,11 @@ class SilicaAnimus:
             getenv("HELLOASSO_CLIENT_ID"), getenv("HELLOASSO_CLIENT_SECRET")
         )
 
+        self.discord_client.membership_request.subscribe(
+            self.helloasso_client.get_membership
+        )
+        self.helloasso_client.is_member.subscribe(self.discord_client.set_membership)
+
     async def run(self) -> bool:
         """Run the discord client"""
         self.logger.info("Running...")

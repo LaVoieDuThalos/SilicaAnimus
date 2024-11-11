@@ -2,6 +2,7 @@ import discord
 import logging
 from os import getenv
 import asyncio
+from event import Event
 
 
 class DiscordClient:
@@ -13,6 +14,7 @@ class DiscordClient:
         self.intents.message_content = True
         self.intents.members = True
         self.intents.guilds = True
+        self.intents.dm_messages = True
 
         self.client = discord.Client(intents=self.intents)
         self.logger = logging.getLogger(__name__)
@@ -22,7 +24,6 @@ class DiscordClient:
         self.thalos_role = None
 
         self.start_future = None
-
         self.run = True
 
         # Events
@@ -42,21 +43,15 @@ class DiscordClient:
             if message.channel.type == discord.ChannelType.private:
                 await self.process_dm(message)
 
+        self.membership_request = Event()
+
     async def process_dm(self, message: discord.Message) -> None:
         """Process the DMs received by the bot and takes associated actions
 
         Args:
             message (discord.Messag): _description_
         """
-        if self.thalos_guild is None:
-            self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
-            if self.thalos_guild is not None:
-                self.thalos_role = self.thalos_guild.get_role(
-                    int(getenv("MEMBER_ROLE_ID"))
-                )
-            else:
-                self.logger.warning("Could not get the member role")
-                return
+        self.populate_roles()
 
         member = self.thalos_guild.get_member(message.author.id)
         if member is None:
@@ -79,7 +74,10 @@ class DiscordClient:
 
         if message.content.startswith("thalosien"):
             self.logger.info(f"{message.author.name} tried to get the role")
-            await message.channel.send("Bientôt implémenté !")
+            content = message.content.split(" ")
+            await self.membership_request(
+                first_name=content[1], last_name=content[2], user_id=message.author.id
+            )
             return
 
         self.logger.info(f"{message.author.name} dm'd the bot with a random message")
@@ -115,3 +113,31 @@ class DiscordClient:
         self.logger.info("Closed...")
 
         return True
+
+    def populate_roles(self) -> None:
+        if self.thalos_guild is None:
+            self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
+            if self.thalos_guild is not None:
+                self.thalos_role = self.thalos_guild.get_role(
+                    int(getenv("MEMBER_ROLE_ID"))
+                )
+            else:
+                self.logger.warning("Could not get the member role")
+                return
+
+                self.logger.warning("Could not get the member role")
+
+    async def set_membership(
+        self, first_name: str, last_name: str, user_id: int
+    ) -> None:
+        self.populate_roles()
+        member = self.thalos_guild.get_member(user_id)
+        if member is None:
+            self.logger.warning(
+                f"{first_name} {last_name} with id {user_id} could not be found"
+            )
+            return
+
+        await member.add_roles(self.thalos_role)
+        await member.send("Tu es maintenant membre sur le serveur !")
+        self.logger.warning(f"{first_name} {last_name} now has the thalos member role")
