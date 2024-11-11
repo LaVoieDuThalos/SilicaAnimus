@@ -54,8 +54,6 @@ class DiscordClient:
 
         self.client = commands.Bot(command_prefix = '!', intents=self.intents)
         self.logger = logger
-        self.client = commands.Bot(command_prefix = '!', intents=self.intents)
-        self.logger = logger
 
         self.token = token
         self.thalos_guild = None
@@ -83,8 +81,6 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
-            await self.client.add_cog(AdminCog())
-            self.logger.info("Admin commands added")
             await self.client.add_cog(AdminCog())
             self.logger.info("Admin commands added")
 
