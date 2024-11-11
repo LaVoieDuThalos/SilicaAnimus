@@ -30,6 +30,7 @@ class HelloAssoClient:
 
         # Events
         self.is_member = Event()
+        self.is_not_member = Event()
 
     @staticmethod
     def get_basic_headers() -> dict:
@@ -126,7 +127,7 @@ class HelloAssoClient:
         return True
 
     async def get_membership(
-        self, first_name: str, last_name: str, user_id: int
+        self, first_name: str, last_name: str, *args, **kwargs
     ) -> bool:
         """Check if a person is a current member of the association
 
@@ -172,10 +173,11 @@ class HelloAssoClient:
                     and last_name.lower() == payer["lastName"].lower()
                 ):
                     self.logger.info(f"{first_name} {last_name} is a member")
-                    await self.is_member(first_name, last_name, user_id)
+                    await self.is_member(first_name, last_name, *args, **kwargs)
                     return True
 
             self.logger.info(f"{first_name} {last_name} is not a member")
+            self.is_not_member(first_name, last_name, *args, **kwargs)
             return False
 
         return False

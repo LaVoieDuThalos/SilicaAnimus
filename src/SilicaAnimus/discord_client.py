@@ -51,7 +51,7 @@ class DiscordClient:
         Args:
             message (discord.Messag): _description_
         """
-        self.populate_roles()
+        await self.populate_guild_data()
 
         member = self.thalos_guild.get_member(message.author.id)
         if member is None:
@@ -76,7 +76,7 @@ class DiscordClient:
             self.logger.info(f"{message.author.name} tried to get the role")
             content = message.content.split(" ")
             await self.membership_request(
-                first_name=content[1], last_name=content[2], user_id=message.author.id
+                first_name=content[1], last_name=content[2], user_id=message.author.id, message_back=True, add_role=True
             )
             return
 
@@ -114,7 +114,7 @@ class DiscordClient:
 
         return True
 
-    def populate_roles(self) -> None:
+    async def populate_guild_data(self) -> None:
         if self.thalos_guild is None:
             self.thalos_guild = self.client.get_guild(int(getenv("THALOS_GUILD_ID")))
             if self.thalos_guild is not None:
@@ -125,19 +125,52 @@ class DiscordClient:
                 self.logger.warning("Could not get the member role")
                 return
 
-                self.logger.warning("Could not get the member role")
-
-    async def set_membership(
-        self, first_name: str, last_name: str, user_id: int
-    ) -> None:
-        self.populate_roles()
+    async def get_member(self, user_id: int) -> discord.Member:
+        await self.populate_guild_data()
         member = self.thalos_guild.get_member(user_id)
         if member is None:
             self.logger.warning(
-                f"{first_name} {last_name} with id {user_id} could not be found"
+                f"User {user_id} could not be found"
+            )
+
+        return member
+
+    async def set_membership(
+        self, first_name: str, last_name: str, user_id: int, *args, **kwargs
+    ) -> None:
+        await self.populate_guild_data()
+        member = await self.get_member(user_id=user_id)
+        if member is None:
+            member = self.client.get_user(user_id)
+            if kwargs['message_back']:
+                member.send("Quelquechose a cassé... Contact les admins du serveur")
+            self.logger.error(
+                f"{first_name} {last_name} got checked for membership but is not in the server anymore ?!"
             )
             return
 
-        await member.add_roles(self.thalos_role)
-        await member.send("Tu es maintenant membre sur le serveur !")
-        self.logger.warning(f"{first_name} {last_name} now has the thalos member role")
+        if kwargs['add_role']:
+            await member.add_roles(self.thalos_role)
+        if kwargs['message_back']:
+            await member.send("Tu es maintenant membre sur le serveur !")
+        self.logger.info(f"{first_name} {last_name} now has the thalos member role")
+
+    async def deny_membership(
+        self, first_name: str, last_name: str, user_id: int, *args, **kwargs
+    ) -> None:
+        await self.populate_guild_data()
+
+        member = await self.get_member(user_id)
+        if member is None:
+            member = self.client.get_user(user_id)
+            if kwargs['message_back']:
+                member.send("Quelquechose a cassé... Contact les admins du serveur")
+            self.logger.error(
+                f"{first_name} {last_name} got checked for membership but is not in the server anymore ?!"
+            )
+            return
+
+        if kwargs['messageBack']:
+            await member.send(
+                "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
+            )

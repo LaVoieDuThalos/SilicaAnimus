@@ -23,6 +23,9 @@ class SilicaAnimus:
             self.helloasso_client.get_membership
         )
         self.helloasso_client.is_member.subscribe(self.discord_client.set_membership)
+        self.helloasso_client.is_not_member.subscribe(
+            self.discord_client.deny_membership
+        )
 
     async def run(self) -> bool:
         """Run the discord client"""
