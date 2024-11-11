@@ -14,17 +14,11 @@ class SilicaAnimus:
             discord_token (str): Discord token for OAuth2
         """
         self.logger = logging.getLogger(__name__)
-        self.discord_client = DiscordClient(getenv("DISCORD_TOKEN"))
         self.helloasso_client = HelloAssoClient(
             getenv("HELLOASSO_CLIENT_ID"), getenv("HELLOASSO_CLIENT_SECRET")
         )
-
-        self.discord_client.membership_request.subscribe(
-            self.helloasso_client.get_membership
-        )
-        self.helloasso_client.is_member.subscribe(self.discord_client.set_membership)
-        self.helloasso_client.is_not_member.subscribe(
-            self.discord_client.deny_membership
+        self.discord_client = DiscordClient(
+            getenv("DISCORD_TOKEN"), helloasso_client=self.helloasso_client
         )
 
     async def run(self) -> bool:
