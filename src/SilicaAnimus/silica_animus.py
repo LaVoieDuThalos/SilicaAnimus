@@ -14,9 +14,11 @@ class SilicaAnimus:
             discord_token (str): Discord token for OAuth2
         """
         self.logger = logging.getLogger(__name__)
-        self.discord_client = DiscordClient(getenv("DISCORD_TOKEN"))
         self.helloasso_client = HelloAssoClient(
             getenv("HELLOASSO_CLIENT_ID"), getenv("HELLOASSO_CLIENT_SECRET")
+        )
+        self.discord_client = DiscordClient(
+            getenv("DISCORD_TOKEN"), helloasso_client=self.helloasso_client
         )
 
     async def run(self) -> bool:
@@ -24,7 +26,7 @@ class SilicaAnimus:
         self.logger.info("Running...")
 
         async with asyncio.TaskGroup() as tg:
-            discord_task = tg.create_task(self.discord_client.start())
-            helloasso_task = tg.create_task(self.helloasso_client.start())
+            tg.create_task(self.discord_client.start())
+            tg.create_task(self.helloasso_client.start())
 
         return True
