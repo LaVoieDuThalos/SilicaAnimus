@@ -32,11 +32,33 @@ class AdminCog(commands.Cog):
     @commands.check_any(commands.has_permissions(manage_messages=True),
                         custom_pinners)
     async def pin(self, ctx, *args, **kwargs):
-        """ This command pin the last message in the channel or the answered
-        message
-        """
+        """ Pins the given message, replied or last message in this channel"""
         logger.info('Running pin command')
-        await ctx.channel.send("I'm pinning the message")
+        if len(args) > 0:
+            for arg in args:
+                link = arg.split('/')
+                server_id = int(link[4])
+                channel_id = int(link[5])
+                message_id = int(link[6])
+                if ctx.guild.id == server_id and ctx.channel.id == channel_id:
+                    to_pin = await ctx.channel.fetch_message(message_id)
+                    await to_pin.pin()
+                    logger.info(f'{to_pin} pinned')
+                else:
+                    await ctx.channel.send(
+                        'Please try to pin in the channel the message'
+                        + ' comes from')
+                    logger.info(f'bad pin resquest (wrong channel)')
+        elif ctx.message.reference is not None:
+            to_pin = await ctx.channel.fetch_message(
+                ctx.message.reference.message_id)
+            await to_pin.pin()
+            
+        else:
+            # If nothing is given, pin the last message of the history
+            # (before the command call)
+            to_pin = [m async for m in ctx.history()][1]
+            await to_pin.pin()
 
 
 class DiscordClient:
