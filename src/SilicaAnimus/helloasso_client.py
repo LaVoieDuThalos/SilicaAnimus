@@ -179,13 +179,14 @@ class HelloAssoClient:
 
             resp_data = json.loads(resp.read())
             for data in resp_data["data"]:
-                payer = data["payer"]
-                if (
-                    first_name.lower() == payer["firstName"].lower()
-                    and last_name.lower() == payer["lastName"].lower()
-                ):
-                    self.logger.info(f"{first_name} {last_name} is a member")
-                    return True
+                for item in data["items"]:
+                    user = item["user"]
+                    if (
+                        first_name.lower() == user["firstName"].lower()
+                        and last_name.lower() == user["lastName"].lower()
+                    ):
+                        self.logger.info(f"{first_name} {last_name} is a member")
+                        return True
 
             self.logger.info(f"{first_name} {last_name} is not a member")
             return False
