@@ -43,7 +43,7 @@ class GoogleSheetsClient:
         try:
             result = (
                 self.sheets.values()
-                .get(spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), range="A1:F1000")
+                .get(spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), range=f"{getenv("GOOGLE_SHEET_ID")}!A1:F1000")
                 .execute()
             )
 
@@ -119,7 +119,11 @@ class GoogleSheetsClient:
 
         self.logger.info(f"Adding {member_info.first_name} {member_info.last_name}")
 
-        values = (await self.get_spreadsheet()).get("values", [])
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            return False
+
+        values = ss.get("values", [])
 
         body = {
             "values": [
