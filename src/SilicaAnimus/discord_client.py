@@ -61,7 +61,7 @@ class AdminCog(commands.Cog):
             raise
 
         roles_stack = args[:split_rank]
-        user_stack = args[split_rank + 1:]
+        user_stack = args[(split_rank + 1):]
 
         # Running command
         for role, g_user in itt.product(roles_stack, user_stack):
@@ -117,8 +117,43 @@ class AdminCog(commands.Cog):
             to_pin = [m async for m in ctx.history()][1]
             await to_pin.pin()
 
+
+class BureauCog(commands.Cog):
+    """Commands used to get information the Bureau"""
+
+    def __init__(self, parent_client):
+        super().__init__()
+
+        self.parent_client = parent_client
+        self.logger = logging.getLogger(type(self).__name__)
+
     @commands.command()
-    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
+    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
+    async def nom_membre(self, ctx, *arg, **kwargs):
+        """This command gets the name of the person from the google sheet"""
+
+        self.logger.info("Running nom_membre command")
+        tokens = ctx.message.content.split(" ")
+        if len(tokens) != 2:
+            self.logger.warning("Wrong check member command")
+            await ctx.channel.send(
+                "Invoke the command with !nom_membre *pseudo du membre*"
+            )
+            return
+
+        member_info: MemberInfo = (
+            await self.parent_client.gsheet_client.get_member_by_discord_name(tokens[1])
+        )
+
+        if member_info.in_spreadsheet:
+            await ctx.channel.send(
+                f"{tokens[1]} est {member_info.first_name} {member_info.last_name}"
+            )
+        else:
+            await ctx.channel.send(f"{tokens[1]} n'est pas dans la google sheet")
+
+    @commands.command()
+    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
     async def check_member(self, ctx, *arg, **kwargs):
         """This command checks if the person is a member on HelloAsso"""
         self.logger.info("Running check_member command")
@@ -156,8 +191,8 @@ class DiscordClient:
         self.intents.guilds = True
         self.intents.dm_messages = True
 
-        self.helloasso_client = helloasso_client
-        self.gsheet_client = gsheet_client
+        self.helloasso_client: HelloAssoClient = helloasso_client
+        self.gsheet_client: GoogleSheetsClient = gsheet_client
 
         self.client = commands.Bot(command_prefix="!", intents=self.intents)
         self.logger = logging.getLogger(__name__)
@@ -186,8 +221,12 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+
             await self.client.add_cog(AdminCog(self))
             self.logger.info("Admin commands added")
+
+            await self.client.add_cog(BureauCog(self))
+            self.logger.info("Bureau commands added")
 
         @self.client.event
         async def on_message(message) -> None:
