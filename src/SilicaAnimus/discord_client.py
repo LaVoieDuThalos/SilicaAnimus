@@ -48,7 +48,10 @@ class AdminCog(commands.Cog):
     @commands.has_role(int(getenv('ADMIN_ROLE_ID')))
     async def give_role(self, ctx, *args, **kwargs):
         """ This command give one or several roles to a user or to a group
-        of users """
+        of users
+
+        Syntax : !give_role [role1] [role2] ... to [user1] [user2] ... [roleA] [roleB]
+        ... """
         logger.info(f'user {ctx.author} invoked give_role command')
 
         # parsing args
@@ -86,7 +89,12 @@ class AdminCog(commands.Cog):
     @commands.check_any(commands.has_permissions(manage_messages=True),
                         custom_pinners)
     async def pin(self, ctx, *args, **kwargs):
-        """ Pins the given message, replied or last message in this channel"""
+        """
+        Pins the given message, replied or last message in this channel
+
+        Usage : Reply to the message you want to pin with !pin
+        OR link messages you want to pin : !pin [link1] [link2] ...
+        OR pins the last message : !pin"""
         logger.info('Running pin command')
         if len(args) > 0:
             for arg in args:
