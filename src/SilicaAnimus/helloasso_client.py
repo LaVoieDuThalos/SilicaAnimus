@@ -131,12 +131,13 @@ class HelloAssoClient:
             {
                 "organizationSlug": getenv("HELLOASSO_ORGANIZATIONSLUG"),
                 "formType": "membership",
-                "formSlug": "qsdqd",
+                "formSlug": getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG"),
             }
         )
 
         members_request_data = members_request_data.encode()
-        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/qsdqd/orders"
+        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}"
+        f"/forms/membership/{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders"
         self.logger.debug(request_url)
         members_request = request.Request(
             url=request_url,
