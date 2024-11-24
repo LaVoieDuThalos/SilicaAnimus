@@ -184,6 +184,13 @@ class DiscordClient:
         async def my_roles(ctx):
             await ctx.channel.send(str(ctx.author.roles))
 
+        @self.client.command()
+        async def whois(ctx, *args):
+            for role_mention in args:
+                role = get_object_mentionned(role_mention, ctx)
+                for member in role.members:
+                    await ctx.channel.send(f'{member.name} is {role.name}')
+
         # Events
         @self.client.event
         async def on_ready() -> None:
