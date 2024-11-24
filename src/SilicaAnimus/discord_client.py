@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
+import itertools as itt
 
 
 from os import getenv
@@ -14,6 +15,22 @@ logger = logging.getLogger('silica_animus')
 
 load_dotenv()
 
+def get_object_mentionned(mention, ctx):
+    if mention.startswith('<') and mention.endswith('>'):
+        if mention.startswith('<@!'):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_member(mention)
+        elif mention.startswith('<@&'):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_role(mention)
+        elif mention.startswith('<@'):
+            mention = int(mention[2:-1])
+            obj = ctx.guild.get_member(mention)
+
+        return obj
+    else:
+        raise ValueError('This is not a mention !')
+
 @commands.check
 def custom_pinners(ctx):
     return False
@@ -21,11 +38,48 @@ def custom_pinners(ctx):
 class AdminCog(commands.Cog):
     """ Commands used to administrate the Discord"""
 
+    def __init__(self, parent_client):
+        super().__init__()
+
+        self.parent_client = parent_client
+        self.logger = logging.getLogger(type(self).__name__)
+
     @commands.command()
     @commands.has_role(int(getenv('ADMIN_ROLE_ID')))
-    async def give_role(self, ctx, *arg, **kwargs):
-        """ This command give role to a user or to a group of users """
-        logger.info('Running give_role command')
+    async def give_role(self, ctx, *args, **kwargs):
+        """ This command give one or several roles to a user or to a group
+        of users """
+        logger.info(f'user {ctx.author} invoked give_role command')
+
+        # parsing args
+        roles_stack = []
+        user_stack = []
+        try:
+            split_rank = args.index('to')
+        except ValueError as e:
+            await ctx.channel.send('Bad command usage. Type !help give_role')
+            raise
+        
+        roles_stack = args[:split_rank]
+        user_stack = args[split_rank + 1:]
+
+        # Running command
+        for role, g_user in itt.product(roles_stack, user_stack):
+            logger.info(f'{role} à {g_user}')
+            men_role = get_object_mentionned(role, ctx)
+            men_guser = get_object_mentionned(g_user, ctx)
+            if not isinstance(men_role, discord.Role):
+                await ctx.channel.send(f'Bad command usage')
+                raise ValueError
+            if isinstance(men_guser, discord.Role):
+                for member in men_guser.members:
+                    await member.add_roles(men_role)
+            elif isinstance(men_guser, discord.Member):
+                await men_guser.add_roles(men_role)
+            else:
+                await ctx.channel.send(f'Bad command usage')
+                raise ValueError                
+            
         await ctx.channel.send('Giving role...')
 
     @commands.command()
@@ -101,7 +155,7 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
-            await self.client.add_cog(AdminCog())
+            await self.client.add_cog(AdminCog(self))
             self.logger.info("Admin commands added")
 
         @self.client.event
