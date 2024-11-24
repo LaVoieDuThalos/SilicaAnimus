@@ -1,13 +1,30 @@
-from __future__ import annotations
-
-import discord
-from discord.ext import commands
+import itertools as itt
 import logging
 from os import getenv
 import asyncio
 
+import discord
+from discord.ext import commands
+
 from SilicaAnimus.helloasso_client import HelloAssoClient
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
+
+
+def get_object_mentionned(mention, ctx):
+    if mention.startswith("<") and mention.endswith(">"):
+        if mention.startswith("<@!"):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_member(mention)
+        elif mention.startswith("<@&"):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_role(mention)
+        elif mention.startswith("<@"):
+            mention = int(mention[2:-1])
+            obj = ctx.guild.get_member(mention)
+
+        return obj
+    else:
+        raise ValueError("This is not a mention !")
 
 
 @commands.check
@@ -26,19 +43,79 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
-    async def give_role(self, ctx, *arg, **kwargs):
-        """This command give role to a user or to a group of users"""
-        self.logger.info("Running give_role command")
+    async def give_role(self, ctx, *args, **kwargs):
+        """This command give one or several roles to a user or to a group
+        of users
+
+        Syntax : !give_role [role1] [role2] ... to [user1] [user2] ... [roleA] [roleB]
+        ..."""
+        self.logger.info(f"user {ctx.author} invoked give_role command")
+
+        # parsing args
+        roles_stack = []
+        user_stack = []
+        try:
+            split_rank = args.index("to")
+        except ValueError:
+            await ctx.channel.send("Bad command usage. Type !help give_role")
+            raise
+
+        roles_stack = args[:split_rank]
+        user_stack = args[split_rank + 1:]
+
+        # Running command
+        for role, g_user in itt.product(roles_stack, user_stack):
+            self.logger.info(f"{role} à {g_user}")
+            men_role = get_object_mentionned(role, ctx)
+            men_guser = get_object_mentionned(g_user, ctx)
+            if not isinstance(men_role, discord.Role):
+                await ctx.channel.send("Bad command usage")
+                raise ValueError
+            if isinstance(men_guser, discord.Role):
+                for member in men_guser.members:
+                    await member.add_roles(men_role)
+            elif isinstance(men_guser, discord.Member):
+                await men_guser.add_roles(men_role)
+            else:
+                await ctx.channel.send("Bad command usage")
+                raise ValueError
+
         await ctx.channel.send("Giving role...")
 
     @commands.command()
     @commands.check_any(commands.has_permissions(manage_messages=True), custom_pinners)
     async def pin(self, ctx, *args, **kwargs):
-        """This command pin the last message in the channel or the answered
-        message
         """
+        Pins the given message, replied or last message in this channel
+
+        Usage : Reply to the message you want to pin with !pin
+        OR link messages you want to pin : !pin [link1] [link2] ...
+        OR pins the last message : !pin"""
         self.logger.info("Running pin command")
-        await ctx.channel.send("I'm pinning the message")
+        if len(args) > 0:
+            for arg in args:
+                link = arg.split("/")
+                server_id = int(link[4])
+                channel_id = int(link[5])
+                message_id = int(link[6])
+                if ctx.guild.id == server_id and ctx.channel.id == channel_id:
+                    to_pin = await ctx.channel.fetch_message(message_id)
+                    await to_pin.pin()
+                    self.logger.info(f"{to_pin} pinned")
+                else:
+                    await ctx.channel.send(
+                        "Please try to pin in the channel the message" + " comes from"
+                    )
+                    self.logger.info("bad pin resquest (wrong channel)")
+        elif ctx.message.reference is not None:
+            to_pin = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            await to_pin.pin()
+
+        else:
+            # If nothing is given, pin the last message of the history
+            # (before the command call)
+            to_pin = [m async for m in ctx.history()][1]
+            await to_pin.pin()
 
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
