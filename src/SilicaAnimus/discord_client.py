@@ -2,13 +2,15 @@ import itertools as itt
 import logging
 from os import getenv
 import asyncio
+from dotenv import load_dotenv
 
 import discord
 from discord.ext import commands
 
-from SilicaAnimus.helloasso_client import HelloAssoClient
-from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
+from helloasso_client import HelloAssoClient
+from google_sheets_client import GoogleSheetsClient, MemberInfo
 
+load_dotenv()
 
 def get_object_mentionned(mention, ctx):
     if mention.startswith("<") and mention.endswith(">"):
