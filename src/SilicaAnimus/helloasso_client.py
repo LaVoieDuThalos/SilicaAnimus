@@ -136,8 +136,10 @@ class HelloAssoClient:
         )
 
         members_request_data = members_request_data.encode()
-        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}"
-        f"/forms/membership/{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders"
+        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/" \
+                      + f"{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders" \
+                      + f"?userSearchKey={last_name}" \
+                      + "&withDetails=true"
         self.logger.debug(request_url)
         members_request = request.Request(
             url=request_url,
@@ -157,6 +159,9 @@ class HelloAssoClient:
             resp_data = json.loads(resp.read())
             for data in resp_data["data"]:
                 for item in data["items"]:
+                    if "user" not in item.keys():
+                        continue
+
                     user = item["user"]
                     if (
                         first_name.lower() == user["firstName"].lower()

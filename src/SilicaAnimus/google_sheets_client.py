@@ -43,7 +43,10 @@ class GoogleSheetsClient:
         try:
             result = (
                 self.sheets.values()
-                .get(spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), range="A1:F1000")
+                .get(
+                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1:F1000",
+                )
                 .execute()
             )
 
