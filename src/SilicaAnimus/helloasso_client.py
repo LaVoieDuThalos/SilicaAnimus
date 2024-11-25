@@ -4,6 +4,7 @@ from os import getenv
 from http.client import HTTPResponse
 import json
 import asyncio
+from typing import List, Tuple, Union
 
 
 class HelloAssoClient:
@@ -116,17 +117,7 @@ class HelloAssoClient:
         self.logger.info("Access token refreshed")
         return True
 
-    async def get_membership(self, first_name: str, last_name: str) -> bool:
-        """Check if a person is a current member of the association
-
-        Returns:
-            bool: True if the person is a member
-        """
-
-        if self.access_token is None:
-            self.logger.warning("No token for get_membership request")
-            return False
-
+    def make_membership_request(self, name_filter: Union[str, None] = None, continuationToken: Union[str, None] = None) -> request.Request:
         members_request_data = parse.urlencode(
             {
                 "organizationSlug": getenv("HELLOASSO_ORGANIZATIONSLUG"),
@@ -138,8 +129,15 @@ class HelloAssoClient:
         members_request_data = members_request_data.encode()
         request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/" \
                       + f"{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders" \
-                      + f"?userSearchKey={last_name}" \
-                      + "&withDetails=true"
+                      + "?pageSize=20" \
+                      + "&withDetails=false"
+
+        if name_filter is not None:
+            request_url += f"&userSearchKey={name_filter}"
+
+        if continuationToken is not None:
+            request_url += f"&continuationToken={continuationToken}"
+
         self.logger.debug(request_url)
         members_request = request.Request(
             url=request_url,
@@ -149,6 +147,25 @@ class HelloAssoClient:
         )
         members_request.add_header("accept", "application/json")
         members_request.add_header("authorization", f"Bearer {self.access_token}")
+
+        return members_request
+
+    async def get_membership(self, first_name: str, last_name: str) -> bool:
+        """Check if a person is a current member of the association
+
+        Args:
+            first_name (str): First name for the query
+            last_name (str): Last name for the query
+
+        Returns:
+            bool: True if the person is a member
+        """
+
+        if self.access_token is None:
+            self.logger.warning("No token for get_membership request")
+            return False
+
+        members_request = self.make_membership_request(name_filter=last_name)
 
         self.logger.info("Getting members")
         resp: HTTPResponse
@@ -174,6 +191,48 @@ class HelloAssoClient:
             return False
 
         return False
+
+    async def get_memberships(self, names: List[Tuple[str, str]]) -> set[Tuple[str, str]]:
+        """Check if a person is a current member of the association
+
+        Args:
+            names (List[Tuple[str, str]): List of first name, last name  to check memberships of
+        Returns:
+             set[Tuple[str, str]]: List of first name, last name who are members
+        """
+
+        lowered_name_list = list(map(lambda t: (t[0].lower(), t[1].lower()), names))
+
+        if self.access_token is None:
+            self.logger.warning("No token for get_membership request")
+            return None
+
+        members_request = self.make_membership_request()
+        return_set = set()
+
+        self.logger.info("Getting members")
+        resp: HTTPResponse
+
+        while True:
+            with request.urlopen(members_request) as resp:
+                if resp.status != 200:
+                    self.logger.warning(f"Could not get members {resp.getcode()}")
+
+                resp_data = json.loads(resp.read())
+                for data in resp_data["data"]:
+                    for item in data["items"]:
+                        if "user" not in item.keys():
+                            continue
+
+                        user = item["user"]
+                        if ((user["firstName"].lower(), user["lastName"].lower()) in lowered_name_list):
+                            return_set.add((user["firstName"], user["lastName"]))
+
+            if resp_data["pagination"]["totalCount"] == 0:
+                return return_set
+
+            continuationToken = resp_data["pagination"]["continuationToken"]
+            members_request = self.make_membership_request(continuationToken=continuationToken)
 
     async def start(self) -> bool:
         """Starts the client"""

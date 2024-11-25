@@ -37,9 +37,33 @@ async def test_helloasso_membership_check() -> bool:
     future = asyncio.create_task(client.start())
     while not client.is_logged:
         await asyncio.sleep(1)
-    await client.get_membership("Lucas", "MARTI")
-    await client.get_membership("Luas", "MARTI")
 
+    result = await client.get_membership("Lucas", "MARTI")
+    print(result)
+    if not result:
+        return False
+
+    print(result)
+    result = await client.get_membership("Lucas", "MARTI")
+    if await client.get_membership("Luas", "MARTI"):
+        return False
+
+    await client.close()
+    await future
+    return True
+
+
+@pytest.mark.asyncio
+async def test_helloasso_memberships_check() -> bool:
+    client = HelloAssoClient(
+        client_id=getenv("HELLOASSO_CLIENT_ID"),
+        client_secret=getenv("HELLOASSO_CLIENT_SECRET"),
+    )
+    future = asyncio.create_task(client.start())
+    while not client.is_logged:
+        await asyncio.sleep(1)
+    result = await client.get_memberships([("Lucas", "MARTI"), ("Luas", "MARTI")])
+    print(result)
     await client.close()
     await future
     return True
@@ -50,3 +74,5 @@ if __name__ == "__main__":
     asyncio.run(test_helloasso_client_connection())
     setup_function(test_helloasso_membership_check)
     asyncio.run(test_helloasso_membership_check())
+    setup_function(test_helloasso_memberships_check)
+    asyncio.run(test_helloasso_memberships_check())
