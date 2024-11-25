@@ -28,13 +28,7 @@ class HelloAssoClient:
         self.run = True
 
     @staticmethod
-    def get_basic_headers() -> dict:
-        """Utility function to define the basic headers for any HTTPS request
-
-        Returns:
-            dict: The headers dict
-        """
-
+    def get_basic_headers():
         headers = {
             "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com/)"
         }
@@ -53,26 +47,8 @@ class HelloAssoClient:
                 "grant_type": "client_credentials",
             }
         )
-        """Get the access token from the authentifaction endpoint
 
-        Returns:
-            bool: True if it managed to get the token
-        """
-        token_request_data = parse.urlencode(
-            {
-                "client_id": self.client_id,
-                "client_secret": self.client_secret,
-                "grant_type": "client_credentials",
-            }
-        )
         token_request_data = token_request_data.encode()
-        token_request = request.Request(
-            url=getenv("HELLOASSO_TOKEN_URL"),
-            data=token_request_data,
-            headers=HelloAssoClient.get_basic_headers(),
-            method="POST",
-        )
-        token_request.add_header("Content-Type", "application/x-www-form-urlencoded")
         token_request = request.Request(
             url=getenv("HELLOASSO_TOKEN_URL"),
             data=token_request_data,
@@ -155,12 +131,13 @@ class HelloAssoClient:
             {
                 "organizationSlug": getenv("HELLOASSO_ORGANIZATIONSLUG"),
                 "formType": "membership",
-                "formSlug": "qsdqd",
+                "formSlug": getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG"),
             }
         )
 
         members_request_data = members_request_data.encode()
-        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/qsdqd/orders"
+        request_url = f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}"
+        f"/forms/membership/{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders"
         self.logger.debug(request_url)
         members_request = request.Request(
             url=request_url,

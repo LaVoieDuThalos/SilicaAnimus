@@ -4,6 +4,7 @@ from os import getenv
 
 from discord_client import DiscordClient
 from helloasso_client import HelloAssoClient
+from google_sheets_client import GoogleSheetsClient
 
 
 class SilicaAnimus:
@@ -17,8 +18,14 @@ class SilicaAnimus:
         self.helloasso_client = HelloAssoClient(
             getenv("HELLOASSO_CLIENT_ID"), getenv("HELLOASSO_CLIENT_SECRET")
         )
+
+        self.gsheet_client = GoogleSheetsClient(
+            getenv("GOOGLE_SERVICE_ACCOUNT_SECRETS_PATH")
+        )
         self.discord_client = DiscordClient(
-            getenv("DISCORD_TOKEN"), helloasso_client=self.helloasso_client
+            getenv("DISCORD_TOKEN"),
+            helloasso_client=self.helloasso_client,
+            gsheet_client=self.gsheet_client,
         )
 
     async def run(self) -> bool:

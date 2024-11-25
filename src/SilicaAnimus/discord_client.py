@@ -1,12 +1,30 @@
-from __future__ import annotations
-
-import discord
-from discord.ext import commands
+import itertools as itt
 import logging
 from os import getenv
 import asyncio
 
-from helloasso_client import HelloAssoClient
+import discord
+from discord.ext import commands
+
+from SilicaAnimus.helloasso_client import HelloAssoClient
+from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
+
+
+def get_object_mentionned(mention, ctx):
+    if mention.startswith("<") and mention.endswith(">"):
+        if mention.startswith("<@!"):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_member(mention)
+        elif mention.startswith("<@&"):
+            mention = int(mention[3:-1])
+            obj = ctx.guild.get_role(mention)
+        elif mention.startswith("<@"):
+            mention = int(mention[2:-1])
+            obj = ctx.guild.get_member(mention)
+
+        return obj
+    else:
+        raise ValueError("This is not a mention !")
 
 
 @commands.check
@@ -25,22 +43,117 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
-    async def give_role(self, ctx, *arg, **kwargs):
-        """This command give role to a user or to a group of users"""
-        self.logger.info("Running give_role command")
+    async def give_role(self, ctx, *args, **kwargs):
+        """This command give one or several roles to a user or to a group
+        of users
+
+        Syntax : !give_role [role1] [role2] ... to [user1] [user2] ... [roleA] [roleB]
+        ..."""
+        self.logger.info(f"user {ctx.author} invoked give_role command")
+
+        # parsing args
+        roles_stack = []
+        user_stack = []
+        try:
+            split_rank = args.index("to")
+        except ValueError:
+            await ctx.channel.send("Bad command usage. Type !help give_role")
+            raise
+
+        roles_stack = args[:split_rank]
+        user_stack = args[(split_rank + 1):]
+
+        # Running command
+        for role, g_user in itt.product(roles_stack, user_stack):
+            self.logger.info(f"{role} à {g_user}")
+            men_role = get_object_mentionned(role, ctx)
+            men_guser = get_object_mentionned(g_user, ctx)
+            if not isinstance(men_role, discord.Role):
+                await ctx.channel.send("Bad command usage")
+                raise ValueError
+            if isinstance(men_guser, discord.Role):
+                for member in men_guser.members:
+                    await member.add_roles(men_role)
+            elif isinstance(men_guser, discord.Member):
+                await men_guser.add_roles(men_role)
+            else:
+                await ctx.channel.send("Bad command usage")
+                raise ValueError
+
         await ctx.channel.send("Giving role...")
 
     @commands.command()
     @commands.check_any(commands.has_permissions(manage_messages=True), custom_pinners)
     async def pin(self, ctx, *args, **kwargs):
-        """This command pin the last message in the channel or the answered
-        message
         """
+        Pins the given message, replied or last message in this channel
+
+        Usage : Reply to the message you want to pin with !pin
+        OR link messages you want to pin : !pin [link1] [link2] ...
+        OR pins the last message : !pin"""
         self.logger.info("Running pin command")
-        await ctx.channel.send("I'm pinning the message")
+        if len(args) > 0:
+            for arg in args:
+                link = arg.split("/")
+                server_id = int(link[4])
+                channel_id = int(link[5])
+                message_id = int(link[6])
+                if ctx.guild.id == server_id and ctx.channel.id == channel_id:
+                    to_pin = await ctx.channel.fetch_message(message_id)
+                    await to_pin.pin()
+                    self.logger.info(f"{to_pin} pinned")
+                else:
+                    await ctx.channel.send(
+                        "Please try to pin in the channel the message" + " comes from"
+                    )
+                    self.logger.info("bad pin resquest (wrong channel)")
+        elif ctx.message.reference is not None:
+            to_pin = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+            await to_pin.pin()
+
+        else:
+            # If nothing is given, pin the last message of the history
+            # (before the command call)
+            to_pin = [m async for m in ctx.history()][1]
+            await to_pin.pin()
+
+
+class BureauCog(commands.Cog):
+    """Commands used to get information the Bureau"""
+
+    def __init__(self, parent_client):
+        super().__init__()
+
+        self.parent_client = parent_client
+        self.logger = logging.getLogger(type(self).__name__)
 
     @commands.command()
-    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
+    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
+    async def nom_membre(self, ctx, *arg, **kwargs):
+        """This command gets the name of the person from the google sheet"""
+
+        self.logger.info("Running nom_membre command")
+        tokens = ctx.message.content.split(" ")
+        if len(tokens) != 2:
+            self.logger.warning("Wrong check member command")
+            await ctx.channel.send(
+                "Invoke the command with !nom_membre *pseudo du membre*"
+            )
+            return
+
+        member_info: MemberInfo = (
+            await self.parent_client.gsheet_client.get_member_by_discord_name(tokens[1])
+        )
+
+        if member_info.in_spreadsheet:
+            await ctx.channel.send(
+                f"{tokens[1]} est {member_info.first_name} {member_info.last_name}"
+            )
+        else:
+            await ctx.channel.send(f"{tokens[1]} n'est pas dans la google sheet")
+
+    @commands.command()
+    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
     async def check_member(self, ctx, *arg, **kwargs):
         """This command checks if the person is a member on HelloAsso"""
         self.logger.info("Running check_member command")
@@ -65,7 +178,12 @@ class AdminCog(commands.Cog):
 class DiscordClient:
     """The Discord client class"""
 
-    def __init__(self, token: str, helloasso_client: HelloAssoClient):
+    def __init__(
+        self,
+        token: str,
+        helloasso_client: HelloAssoClient,
+        gsheet_client: GoogleSheetsClient,
+    ):
         """_summary_"""
         self.intents = discord.Intents.default()
         self.intents.message_content = True
@@ -73,7 +191,8 @@ class DiscordClient:
         self.intents.guilds = True
         self.intents.dm_messages = True
 
-        self.helloasso_client = helloasso_client
+        self.helloasso_client: HelloAssoClient = helloasso_client
+        self.gsheet_client: GoogleSheetsClient = gsheet_client
 
         self.client = commands.Bot(command_prefix="!", intents=self.intents)
         self.logger = logging.getLogger(__name__)
@@ -102,8 +221,12 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+
             await self.client.add_cog(AdminCog(self))
             self.logger.info("Admin commands added")
+
+            await self.client.add_cog(BureauCog(self))
+            self.logger.info("Bureau commands added")
 
         @self.client.event
         async def on_message(message) -> None:
@@ -146,17 +269,18 @@ class DiscordClient:
             return
 
         if message.content.startswith("thalosien"):
-            self.logger.info(f"{message.author.name} tried to get the role")
             content = message.content.split(" ")
-            is_member = await self.helloasso_client.get_membership(
-                first_name=content[1],
-                last_name=content[2],
-            )
+            if len(content) < 3:
+                await message.channel.send(
+                    f'Bonjour {message.author.name}. Pour avoir le rôle membre, tapez "thalosien Prénom Nom ". Le bot va vérifier votre adhésion.'
+                )
+                return
 
-            if is_member:
-                await self.set_membership(member)
-            else:
-                await self.deny_membership(member)
+            first_name, last_name = content[1], content[2]
+            self.logger.info(f"{message.author.name} tried to get the role")
+            await self.process_membership(
+                member=member, first_name=first_name, last_name=last_name
+            )
             return
 
         self.logger.info(f"{message.author.name} dm'd the bot with a random message")
@@ -221,12 +345,91 @@ class DiscordClient:
 
         return member
 
-    async def set_membership(self, member: discord.Member) -> None:
+    async def process_membership(
+        self, member: discord.Member, first_name: str, last_name: str
+    ) -> None:
+        async with asyncio.TaskGroup() as tg:
+            ha_task = tg.create_task(
+                self.helloasso_client.get_membership(
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+            )
+
+            real_name_gsheet_task = tg.create_task(
+                self.gsheet_client.get_member_by_name(
+                    first_name=first_name, last_name=last_name
+                )
+            )
+
+            discord_name_gsheet_task = tg.create_task(
+                self.gsheet_client.get_member_by_discord_name(discord_name=member.name)
+            )
+
+        is_member = ha_task.result()
+        real_name_member_info: MemberInfo = real_name_gsheet_task.result()
+        discord_name_member_info: MemberInfo = discord_name_gsheet_task.result()
+
+        if not is_member:
+            self.logger.info(
+                f"{first_name} {last_name} got denied the role, not a HelloAsso member"
+            )
+            await member.send(
+                "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
+            )
+            return
+
+        if discord_name_member_info.in_spreadsheet and (
+            discord_name_member_info.first_name.lower() != first_name.lower()
+            or discord_name_member_info.last_name.lower() != last_name.lower()
+        ):
+            self.logger.info(
+                f"{member.name} got denied the role with {first_name} {last_name}, "
+                "this discord name is already associated with {discord_name_member_info.first_name}, {discord_name_member_info.last_name}"
+            )
+            await member.send(
+                "Ce compte est associé à un autre nom. Contactez un admin."
+            )
+            return
+
+        if (
+            real_name_member_info.in_spreadsheet
+            and real_name_member_info.discord_nickname.lower() != member.name
+        ):
+            self.logger.info(
+                f"{member.name} got denied the role with {first_name} {last_name}, "
+                "this discord name is already associated with {discord_name_member_info.discord_nickname}"
+            )
+            await member.send(
+                "Ce nom est associé à un autre pseudo discord. Contactez un admin."
+            )
+            return
+
+        await self.set_membership(member, first_name, last_name)
+
+    async def set_membership(
+        self, member: discord.Member, first_name: str, last_name: str
+    ) -> None:
+        """Set the membership on discord and updates the spreadsheet
+
+        Args:
+            member (discord.Member): Discord guild member information
+            first_name (str): First name of the member
+            last_name (str): Last name of the member
+        """
         await member.add_roles(self.thalos_role)
         await member.send("Tu es maintenant membre sur le serveur !")
         self.logger.info(f"{member.name} now has the thalos member role")
 
-    async def deny_membership(self, member: discord.Member) -> None:
-        await member.send(
-            "Tu n'es apparemment pas membre. Vérifie que tu as envoyé les mêmes noms et prénoms que lors de ton inscription sur HelloAsso !"
+        member_info = MemberInfo(
+            first_name=first_name,
+            last_name=last_name,
+            discord_nickname=member.name,
+            server_nickname=member.display_name,
         )
+
+        ret = await self.gsheet_client.add_member(member_info)
+        if not ret:
+            self.logger.error(f"Could not add {member_info} to spreadsheet")
+
+        self.logger.info(f"{member_info} added to spreadsheet")
