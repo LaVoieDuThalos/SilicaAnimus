@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 from dataclasses import dataclass
 import logging
 
-from typing import Union
+from typing import List
 
 
 @dataclass
@@ -15,8 +15,9 @@ class MemberInfo:
     first_name: str = ""
     last_name: str = ""
     discord_nickname: str = ""
-    server_nickname: str = ""
     in_spreadsheet: bool = False
+    member_current_year: bool = False
+    member_last_year: bool = False
 
 
 class GoogleSheetsClient:
@@ -34,7 +35,7 @@ class GoogleSheetsClient:
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
 
-    async def get_spreadsheet(self) -> Union[None, ResourceWarning]:
+    async def get_spreadsheet(self):
         """Returns the spreadsheet
 
         Returns:
@@ -89,6 +90,9 @@ class GoogleSheetsClient:
         """Get the member's information using the discord name
         Args:
             discord_name (str): discord name of the user
+
+        Returns:
+            MemberInfo : The member's information from the spreadsheet
         """
 
         self.logger.info(f"Looking up user {discord_name}")
@@ -109,9 +113,57 @@ class GoogleSheetsClient:
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 member_info.server_nickname = values[row_index][2]
+
                 return member_info
 
         return member_info
+
+    async def get_members_by_discord_names(
+        self, discord_names: List[str]
+    ) -> List[MemberInfo]:
+        """Get the members' information using the discord name
+
+        Args:
+            discord_names (List[str]): discord names of the users to query
+
+        Returns:
+            List[MemberInfo] : The members' information from the spreadsheet
+        """
+
+        self.logger.info(f"Looking up {len(discord_names)} users")
+
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            return None
+
+        values = ss.get("values", [])
+
+        members_info_dict = {
+            discord_name: MemberInfo(discord_nickname=discord_name)
+            for discord_name in discord_names
+        }
+
+        for row_index in range(len(values)):
+            if len(values[row_index]) < 3:
+                continue
+
+            if values[row_index][2] in discord_names:
+                discord_name = values[row_index][2]
+                members_info_dict[discord_name].in_spreadsheet = True
+                members_info_dict[discord_name].last_name = values[row_index][0]
+                members_info_dict[discord_name].first_name = values[row_index][1]
+                if len(values[row_index]) < 4:
+                    continue
+                members_info_dict[discord_name].member_last_year = (
+                    values[row_index][3] == "Oui"
+                )
+                if len(values[row_index]) < 5:
+                    continue
+                members_info_dict[discord_name].member_current_year = (
+                    values[row_index][4] == "Oui"
+                )
+
+        return list(members_info_dict.values())
 
     async def add_member(self, member_info: MemberInfo) -> bool:
         """Add the member in the spreadsheet. If the member is already in the spreadsheet, update informations about the member.
@@ -133,8 +185,9 @@ class GoogleSheetsClient:
                 [
                     member_info.last_name,
                     member_info.first_name,
-                    member_info.server_nickname,
                     member_info.discord_nickname,
+                    "Oui" if member_info.member_current_year else "",
+                    "Oui" if member_info.member_last_year else "",
                 ]
             ]
         }
@@ -154,7 +207,7 @@ class GoogleSheetsClient:
                     self.sheets.values()
                     .append(
                         spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range="A1",
+                        range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
                         valueInputOption="USER_ENTERED",
                         body=body,
                     )
