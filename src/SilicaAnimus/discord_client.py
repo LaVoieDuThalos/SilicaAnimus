@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 from helloasso_client import HelloAssoClient
 from google_sheets_client import GoogleSheetsClient, MemberInfo
@@ -27,11 +28,6 @@ def get_object_mentionned(mention, ctx):
         return obj
     else:
         raise ValueError("This is not a mention !")
-
-
-@commands.check
-def custom_pinners(ctx):
-    return False
 
 
 class AdminCog(commands.Cog):
@@ -85,8 +81,7 @@ class AdminCog(commands.Cog):
         await ctx.channel.send("Giving role...")
 
     @commands.command()
-    @commands.check_any(commands.has_permissions(manage_messages=True), custom_pinners)
-    async def pin(self, ctx, *args, **kwargs):
+    async def pin(self, ctx, arg: str):
         """
         Pins the given message, replied or last message in this channel
 
@@ -118,7 +113,6 @@ class AdminCog(commands.Cog):
             # (before the command call)
             to_pin = [m async for m in ctx.history()][1]
             await to_pin.pin()
-
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
     async def check_member(self, ctx, *arg, **kwargs):
@@ -161,46 +155,81 @@ class DiscordClient:
         self.helloasso_client = helloasso_client
         self.gsheet_client = gsheet_client
 
-        self.client = commands.Bot(command_prefix="!", intents=self.intents)
+        self.client = commands.Bot(command_prefix = '!', intents = self.intents)
+        self.tree = self.client.tree
+        
         self.logger = logging.getLogger(__name__)
 
         self.token = token
-        self.thalos_guild = None
+        self.thalos_guild = discord.Object(getenv('THALOS_GUILD_ID'))
         self.thalos_role = None
 
         self.start_future = None
         self.run = True
 
         # Commands
-        @self.client.command()
-        async def ping(ctx):
-            await ctx.channel.send("pong")
+        @self.tree.command(guild = self.thalos_guild)
+        async def ping(interaction: discord.Interaction):
+            embed = discord.Embed(
+                title = 'Pong !',
+                description = f'Bot ping is {round(1000*self.client.latency)} ms',
+                color = discord.Colour.dark_red()
+                )
+            await interaction.response.send_message(embed = embed)
+            
+            
+        @self.tree.command(guild = self.thalos_guild)
+        async def echo(interaction: discord.Interaction, text: str):
+            embed = discord.Embed(
+                title = 'Echo...',
+                description = text,
+                color = discord.Colour.dark_red()
+                )
+            await interaction.response.send_message(embed = embed)
 
-        @self.client.command()
-        async def echo(ctx, *args):
-            await ctx.channel.send(" ".join(args))
+        @self.tree.command(guild = self.thalos_guild)
+        async def my_roles(interaction: discord.Interaction):
+            embed = discord.Embed(
+                title = 'Your roles are : ', 
+                description = ''.join(
+                    [role.name + '\n' for role in interaction.user.roles[::-1]]
+                ),
+                color = discord.Colour.dark_red()
+                )
+            await interaction.response.send_message(embed = embed)
 
-        @self.client.command()
-        async def my_roles(ctx):
-            await ctx.channel.send(str(ctx.author.roles))
+        @self.tree.command(guild = self.thalos_guild)
+        async def whois(interaction: discord.Interaction,
+                        role_mention: str):
 
-        @self.client.command()
-        async def whois(ctx, *args):
-            for role_mention in args:
-                role = get_object_mentionned(role_mention, ctx)
-                for member in role.members:
-                    await ctx.channel.send(f'{member.name} is {role.name}')
+            role = get_object_mentionned(role_mention, interaction)
+            embed = discord.Embed(
+                description = f'Les membres ayant le role {role_mention} sont :', 
+                color = discord.Colour.dark_red()
+                )
+            max_fields = 25
+            number_by_field = len(role.members) // max_fields + 1
 
+            for i in range(min(max_fields, len(role.members))):
+                embed.add_field(name = '', value = ''.join(
+                    [member.mention + '\n'
+                     for member in role.members[i::max_fields]]))
+            await interaction.response.send_message(embed = embed)
+        
         # Events
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
-            await self.client.add_cog(AdminCog(self))
+
+            #await self.client.add_cog(AdminCog(self))
+
+            await self.client.tree.sync(guild = self.thalos_guild)
+            
             self.logger.info("Admin commands added")
 
         @self.client.event
         async def on_message(message) -> None:
-            await self.client.process_commands(message)
+            #await self.client.process_commands(message)
             self.logger.debug(
                 f"message {message.content} received from {message.author}"
             )
