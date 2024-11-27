@@ -60,9 +60,9 @@ async def test_google_sheets_add_members() -> bool:
 
 if __name__ == "__main__":
     setup_function(test_google_sheets_client_connection)
-    asyncio.run(test_google_sheets_client_connection())
-    asyncio.run(test_google_sheets_get_spreadsheet())
-    asyncio.run(test_google_sheets_get_member_by_name())
+    # asyncio.run(test_google_sheets_client_connection())
+    # asyncio.run(test_google_sheets_get_spreadsheet())
+    # asyncio.run(test_google_sheets_get_member_by_name())
     asyncio.run(test_google_sheets_get_members_by_discord_name())
-    asyncio.run(test_google_sheets_add_member())
-    asyncio.run(test_google_sheets_add_members())
+    # asyncio.run(test_google_sheets_add_member())
+    # asyncio.run(test_google_sheets_add_members())

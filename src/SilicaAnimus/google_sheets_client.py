@@ -138,32 +138,28 @@ class GoogleSheetsClient:
 
         values = ss.get("values", [])
 
-        members_info_dict = {
-            discord_name: MemberInfo(discord_nickname=discord_name)
-            for discord_name in discord_names
-        }
+        members_list = []
 
         for row_index in range(len(values)):
             if len(values[row_index]) < 3:
                 continue
 
             if values[row_index][2] in discord_names:
-                discord_name = values[row_index][2]
-                members_info_dict[discord_name].in_spreadsheet = True
-                members_info_dict[discord_name].last_name = values[row_index][0]
-                members_info_dict[discord_name].first_name = values[row_index][1]
+                member_info = MemberInfo()
+                member_info.discord_nickname = values[row_index][2]
+                member_info.in_spreadsheet = True
+                member_info.last_name = values[row_index][0]
+                member_info.first_name = values[row_index][1]
                 if len(values[row_index]) < 4:
                     continue
-                members_info_dict[discord_name].member_last_year = (
-                    values[row_index][3] == "Oui"
-                )
+                member_info.member_last_year = values[row_index][3] == "Oui"
                 if len(values[row_index]) < 5:
                     continue
-                members_info_dict[discord_name].member_current_year = (
-                    values[row_index][4] == "Oui"
-                )
+                member_info.member_current_year = values[row_index][4] == "Oui"
 
-        return list(members_info_dict.values())
+                members_list.append(member_info)
+
+        return members_list
 
     async def add_member(self, member_info: MemberInfo) -> bool:
         """Add the member in the spreadsheet. If the member is already in the spreadsheet, update informations about the member.
