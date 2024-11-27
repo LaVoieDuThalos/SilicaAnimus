@@ -2,6 +2,7 @@ import itertools as itt
 import logging
 from os import getenv
 import asyncio
+import typing
 from dotenv import load_dotenv
 
 import discord
@@ -39,48 +40,6 @@ class AdminCog(commands.Cog):
 
         self.parent_client = parent_client
         self.logger = logging.getLogger(type(self).__name__)
-
-    @commands.command()
-    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
-    async def give_role(self, ctx, *args, **kwargs):
-        """This command give one or several roles to a user or to a group
-        of users
-
-        Syntax : !give_role [role1] [role2] ... to [user1] [user2] ... [roleA] [roleB]
-        ..."""
-        self.logger.info(f"user {ctx.author} invoked give_role command")
-
-        # parsing args
-        roles_stack = []
-        user_stack = []
-        try:
-            split_rank = args.index("to")
-        except ValueError:
-            await ctx.channel.send("Bad command usage. Type !help give_role")
-            raise
-
-        roles_stack = args[:split_rank]
-        user_stack = args[split_rank + 1:]
-
-        # Running command
-        for role, g_user in itt.product(roles_stack, user_stack):
-            self.logger.info(f"{role} à {g_user}")
-            men_role = get_object_mentionned(role, ctx)
-            men_guser = get_object_mentionned(g_user, ctx)
-            if not isinstance(men_role, discord.Role):
-                await ctx.channel.send("Bad command usage")
-                raise ValueError
-            if isinstance(men_guser, discord.Role):
-                for member in men_guser.members:
-                    await member.add_roles(men_role)
-            elif isinstance(men_guser, discord.Member):
-                await men_guser.add_roles(men_role)
-            else:
-                await ctx.channel.send("Bad command usage")
-                raise ValueError
-
-        await ctx.channel.send("Giving role...")
-
 
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
@@ -209,7 +168,30 @@ class DiscordClient:
                                                         ephemeral = True)
             except discord.errors.HTTPException as e:
                 await interaction.response.send_message(e, ephemeral = True)
+
+        @app_commands.checks.has_role('Administrateurs')
+        @self.tree.command(guild = self.thalos_guild)
+        async def give_role(interaction: discord.Interaction,
+                            role_given: discord.Role,
+                            user_group: discord.Role):
+
+            message = ''
+            for member in user_group.members:
+                try:
+                    await member.add_roles(role_given)
+                    message = (
+                        message
+                        + f'Giving role {role_given.name} to {member.name}\n'
+                        )
+                    
+                except Exception as e:
+                    message += str(e)
+                    await interaction.response.send_message(
+                        message, ephemeral = True)
+                    raise
                 
+            await interaction.response.send_message(message, ephemeral = True)
+                            
         
         @self.tree.command(guild = self.thalos_guild)
         async def testing_form(interaction: discord.Interaction):
