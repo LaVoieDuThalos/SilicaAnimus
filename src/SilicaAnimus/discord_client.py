@@ -61,7 +61,7 @@ class AdminCog(commands.Cog):
             raise
 
         roles_stack = args[:split_rank]
-        user_stack = args[(split_rank + 1):]
+        user_stack = args[split_rank + 1:]
 
         # Running command
         for role, g_user in itt.product(roles_stack, user_stack):

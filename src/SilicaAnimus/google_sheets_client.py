@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 from dataclasses import dataclass
 import logging
 
-from typing import Union
+from typing import List
 
 
 @dataclass
@@ -15,8 +15,9 @@ class MemberInfo:
     first_name: str = ""
     last_name: str = ""
     discord_nickname: str = ""
-    server_nickname: str = ""
     in_spreadsheet: bool = False
+    member_current_year: bool = False
+    member_last_year: bool = False
 
 
 class GoogleSheetsClient:
@@ -34,7 +35,7 @@ class GoogleSheetsClient:
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
 
-    async def get_spreadsheet(self) -> Union[None, ResourceWarning]:
+    async def get_spreadsheet(self):
         """Returns the spreadsheet
 
         Returns:
@@ -89,6 +90,9 @@ class GoogleSheetsClient:
         """Get the member's information using the discord name
         Args:
             discord_name (str): discord name of the user
+
+        Returns:
+            MemberInfo : The member's information from the spreadsheet
         """
 
         self.logger.info(f"Looking up user {discord_name}")
@@ -109,9 +113,53 @@ class GoogleSheetsClient:
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 member_info.server_nickname = values[row_index][2]
+
                 return member_info
 
         return member_info
+
+    async def get_members_by_discord_names(
+        self, discord_names: List[str]
+    ) -> List[MemberInfo]:
+        """Get the members' information using the discord name
+
+        Args:
+            discord_names (List[str]): discord names of the users to query
+
+        Returns:
+            List[MemberInfo] : The members' information from the spreadsheet
+        """
+
+        self.logger.info(f"Looking up {len(discord_names)} users")
+
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            return None
+
+        values = ss.get("values", [])
+
+        members_list = []
+
+        for row_index in range(len(values)):
+            if len(values[row_index]) < 3:
+                continue
+
+            if values[row_index][2] in discord_names:
+                member_info = MemberInfo()
+                member_info.discord_nickname = values[row_index][2]
+                member_info.in_spreadsheet = True
+                member_info.last_name = values[row_index][0]
+                member_info.first_name = values[row_index][1]
+                if len(values[row_index]) < 4:
+                    continue
+                member_info.member_last_year = values[row_index][3] == "Oui"
+                if len(values[row_index]) < 5:
+                    continue
+                member_info.member_current_year = values[row_index][4] == "Oui"
+
+                members_list.append(member_info)
+
+        return members_list
 
     async def add_member(self, member_info: MemberInfo) -> bool:
         """Add the member in the spreadsheet. If the member is already in the spreadsheet, update informations about the member.
@@ -122,15 +170,20 @@ class GoogleSheetsClient:
 
         self.logger.info(f"Adding {member_info.first_name} {member_info.last_name}")
 
-        values = (await self.get_spreadsheet()).get("values", [])
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            return False
+
+        values = ss.get("values", [])
 
         body = {
             "values": [
                 [
                     member_info.last_name,
                     member_info.first_name,
-                    member_info.server_nickname,
                     member_info.discord_nickname,
+                    "Oui" if member_info.member_current_year else "",
+                    "Oui" if member_info.member_last_year else "",
                 ]
             ]
         }
@@ -150,7 +203,7 @@ class GoogleSheetsClient:
                     self.sheets.values()
                     .append(
                         spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range="A1",
+                        range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
                         valueInputOption="USER_ENTERED",
                         body=body,
                     )
@@ -168,12 +221,88 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .update(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"A{member_sheet_row}:F{member_sheet_row}",
+                    range=f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )
                 .execute()
             )
+        except HttpError as error:
+            self.logger.error(error.content)
+            return None
+
+        return True
+
+    async def add_members(self, members_info: List[MemberInfo]) -> bool:
+        """Add the members in the spreadsheet. If a member is already in the spreadsheet, update informations about the member.
+
+        Args:
+            member_info (List[MemberInfo]): The member's information.
+        """
+
+        self.logger.info(f"Adding {len(members_info)} members")
+
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            return False
+
+        values = ss.get("values", [])
+
+        insert_values = {
+            (member_info.first_name.lower(), member_info.last_name.lower()): [
+                member_info.last_name,
+                member_info.first_name,
+                member_info.discord_nickname,
+                "Oui" if member_info.member_current_year else "",
+                "Oui" if member_info.member_last_year else "",
+            ]
+            for member_info in members_info
+        }
+
+        names_list = [(value[1].lower(), value[0].lower()) for value in values]
+
+        update_data = []
+        append_data = []
+
+        for member_info in members_info:
+            name_tuple = (member_info.first_name.lower(), member_info.last_name.lower())
+            if names_list.count(name_tuple) > 0:
+                member_sheet_row = names_list.index(name_tuple) + 1
+                update_data.append(
+                    {
+                        "range": f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
+                        "values": [insert_values[name_tuple]],
+                    }
+                )
+            else:
+                append_data.append(insert_values[name_tuple])
+
+        try:
+            self.logger.info(f"Updating {len(update_data)} existing members")
+            body = {"valueInputOption": "USER_ENTERED", "data": update_data}
+            (
+                self.sheets.values()
+                .batchUpdate(spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), body=body)
+                .execute()
+            )
+        except HttpError as error:
+            self.logger.error(error.content)
+            return None
+
+        try:
+            self.logger.info(f"Appending {len(append_data)} new members")
+            body = {"values": append_data}
+            (
+                self.sheets.values()
+                .append(
+                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
+                    valueInputOption="USER_ENTERED",
+                    body=body,
+                )
+                .execute()
+            )
+
         except HttpError as error:
             self.logger.error(error.content)
             return None

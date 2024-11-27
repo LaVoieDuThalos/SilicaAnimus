@@ -31,6 +31,7 @@ dependencies = [
   "pytest",
   "pytest-asyncio",
   "pre-commit",
+  "google-api-python-client"
 ]
 
 [project.scripts]
