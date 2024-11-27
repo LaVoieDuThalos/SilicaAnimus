@@ -5,8 +5,9 @@ import asyncio
 from dotenv import load_dotenv
 
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
 
 from helloasso_client import HelloAssoClient
 from google_sheets_client import GoogleSheetsClient, MemberInfo
@@ -80,39 +81,7 @@ class AdminCog(commands.Cog):
 
         await ctx.channel.send("Giving role...")
 
-    @commands.command()
-    async def pin(self, ctx, arg: str):
-        """
-        Pins the given message, replied or last message in this channel
 
-        Usage : Reply to the message you want to pin with !pin
-        OR link messages you want to pin : !pin [link1] [link2] ...
-        OR pins the last message : !pin"""
-        self.logger.info("Running pin command")
-        if len(args) > 0:
-            for arg in args:
-                link = arg.split("/")
-                server_id = int(link[4])
-                channel_id = int(link[5])
-                message_id = int(link[6])
-                if ctx.guild.id == server_id and ctx.channel.id == channel_id:
-                    to_pin = await ctx.channel.fetch_message(message_id)
-                    await to_pin.pin()
-                    self.logger.info(f"{to_pin} pinned")
-                else:
-                    await ctx.channel.send(
-                        "Please try to pin in the channel the message" + " comes from"
-                    )
-                    self.logger.info("bad pin resquest (wrong channel)")
-        elif ctx.message.reference is not None:
-            to_pin = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-            await to_pin.pin()
-
-        else:
-            # If nothing is given, pin the last message of the history
-            # (before the command call)
-            to_pin = [m async for m in ctx.history()][1]
-            await to_pin.pin()
     @commands.command()
     @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
     async def check_member(self, ctx, *arg, **kwargs):
@@ -155,18 +124,22 @@ class DiscordClient:
         self.helloasso_client = helloasso_client
         self.gsheet_client = gsheet_client
 
-        self.client = commands.Bot(command_prefix = '!', intents = self.intents)
+        self.client = commands.Bot(command_prefix = '?', intents = self.intents)
         self.tree = self.client.tree
         
         self.logger = logging.getLogger(__name__)
 
         self.token = token
-        self.thalos_guild = discord.Object(getenv('THALOS_GUILD_ID'))
+        self.thalos_guild = None#discord.Object(getenv('THALOS_GUILD_ID'))
         self.thalos_role = None
 
         self.start_future = None
         self.run = True
 
+        @commands.command()
+        async def ping(ctx):
+            await ctx.send('pong !')
+            
         # Commands
         @self.tree.command(guild = self.thalos_guild)
         async def ping(interaction: discord.Interaction):
@@ -215,21 +188,52 @@ class DiscordClient:
                     [member.mention + '\n'
                      for member in role.members[i::max_fields]]))
             await interaction.response.send_message(embed = embed)
+            
+        class MyView(discord.ui.View):
+            @discord.ui.button(label = 'Click me !')
+            async def button_callback(self, interaction, button):
+                await interaction.response.send_message('You clicked !!')
+                
+        @self.tree.command(guild = self.thalos_guild)
+        async def testing_button(interaction: discord.Interaction):
+            await interaction.response.send_message('My button', view = MyView())
+
+        @self.tree.context_menu(name = 'Epingler',
+                                guild = self.thalos_guild)
+        @app_commands.checks.has_role('Administrateurs')
+        async def pin(interaction: discord.Interaction,
+                      message: discord.Message):
+            try:
+                await message.pin()
+                await interaction.response.send_message('Message épinglé !',
+                                                        ephemeral = True)
+            except discord.errors.HTTPException as e:
+                await interaction.response.send_message(e, ephemeral = True)
+                
         
+        @self.tree.command(guild = self.thalos_guild)
+        async def testing_form(interaction: discord.Interaction):
+            
+            class MyModal(discord.ui.Modal, title = 'Informations'):
+                nom = discord.ui.TextInput(label = 'Nom')
+                prenom = discord.ui.TextInput(label = 'Prénom')
+
+                async def on_submit(self, interaction: discord.Interaction):
+                    await interaction.response.send_message(f'Merci {self.nom} {self.prenom}')
+
+
+            modal = MyModal()
+            await interaction.response.send_modal(modal)
+
         # Events
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
-
-            #await self.client.add_cog(AdminCog(self))
-
             await self.client.tree.sync(guild = self.thalos_guild)
-            
             self.logger.info("Admin commands added")
 
         @self.client.event
         async def on_message(message) -> None:
-            #await self.client.process_commands(message)
             self.logger.debug(
                 f"message {message.content} received from {message.author}"
             )
