@@ -36,7 +36,7 @@ async def test_google_sheets_get_member_by_name() -> bool:
 @pytest.mark.asyncio
 async def test_google_sheets_get_members_by_discord_name() -> bool:
     client = GoogleSheetsClient(getenv("GOOGLE_SERVICE_ACCOUNT_SECRETS_PATH"))
-    print(await client.get_members_by_discord_names([".endya", "lucasthepatator"]))
+    print(await client.get_members_by_discord_names([".endya", "lucasthepatator", "jeanpierrepernaud"]))
 
 
 @pytest.mark.asyncio
@@ -60,9 +60,9 @@ async def test_google_sheets_add_members() -> bool:
 
 if __name__ == "__main__":
     setup_function(test_google_sheets_client_connection)
-    # asyncio.run(test_google_sheets_client_connection())
-    # asyncio.run(test_google_sheets_get_spreadsheet())
-    # asyncio.run(test_google_sheets_get_member_by_name())
+    asyncio.run(test_google_sheets_client_connection())
+    asyncio.run(test_google_sheets_get_spreadsheet())
+    asyncio.run(test_google_sheets_get_member_by_name())
     asyncio.run(test_google_sheets_get_members_by_discord_name())
-    # asyncio.run(test_google_sheets_add_member())
-    # asyncio.run(test_google_sheets_add_members())
+    asyncio.run(test_google_sheets_add_member())
+    asyncio.run(test_google_sheets_add_members())
