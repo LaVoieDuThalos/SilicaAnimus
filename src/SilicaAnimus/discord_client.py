@@ -15,54 +15,6 @@ from google_sheets_client import GoogleSheetsClient, MemberInfo
 
 load_dotenv()
 
-def get_object_mentionned(mention, ctx):
-    if mention.startswith("<") and mention.endswith(">"):
-        if mention.startswith("<@!"):
-            mention = int(mention[3:-1])
-            obj = ctx.guild.get_member(mention)
-        elif mention.startswith("<@&"):
-            mention = int(mention[3:-1])
-            obj = ctx.guild.get_role(mention)
-        elif mention.startswith("<@"):
-            mention = int(mention[2:-1])
-            obj = ctx.guild.get_member(mention)
-
-        return obj
-    else:
-        raise ValueError("This is not a mention !")
-
-
-class AdminCog(commands.Cog):
-    """Commands used to administrate the Discord"""
-
-    def __init__(self, parent_client):
-        super().__init__()
-
-        self.parent_client = parent_client
-        self.logger = logging.getLogger(type(self).__name__)
-
-    @commands.command()
-    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
-    async def check_member(self, ctx, *arg, **kwargs):
-        """This command checks if the person is a member on HelloAsso"""
-        self.logger.info("Running check_member command")
-        tokens = ctx.message.content.split(" ")
-        if len(tokens) != 3:
-            self.logger.warning("Wrong check member command")
-            await ctx.channel.send(
-                "Invoke the command with !check_member *first_name* *last_name*"
-            )
-            return
-
-        first_name, last_name = tokens[1], tokens[2]
-        is_member = await self.parent_client.helloasso_client.get_membership(
-            first_name=first_name, last_name=last_name
-        )
-        if is_member:
-            await ctx.channel.send(f"{first_name} {last_name} is a member")
-        else:
-            await ctx.channel.send(f"{first_name} {last_name} is not a member")
-
 
 class DiscordClient:
     """The Discord client class"""
@@ -95,10 +47,6 @@ class DiscordClient:
         self.start_future = None
         self.run = True
 
-        @commands.command()
-        async def ping(ctx):
-            await ctx.send('pong !')
-            
         # Commands
         @self.tree.command(guild = self.thalos_guild)
         async def ping(interaction: discord.Interaction):
@@ -119,6 +67,7 @@ class DiscordClient:
                 )
             await interaction.response.send_message(embed = embed)
 
+            
         @self.tree.command(guild = self.thalos_guild)
         async def my_roles(interaction: discord.Interaction):
             embed = discord.Embed(
@@ -130,13 +79,13 @@ class DiscordClient:
                 )
             await interaction.response.send_message(embed = embed)
 
+            
         @self.tree.command(guild = self.thalos_guild)
         async def whois(interaction: discord.Interaction,
-                        role_mention: str):
+                        role: discord.Role):
 
-            role = get_object_mentionned(role_mention, interaction)
             embed = discord.Embed(
-                description = f'Les membres ayant le role {role_mention} sont :', 
+                description = f'Les membres ayant le role {role.mention} sont :', 
                 color = discord.Colour.dark_red()
                 )
             max_fields = 25
@@ -157,6 +106,7 @@ class DiscordClient:
         async def testing_button(interaction: discord.Interaction):
             await interaction.response.send_message('My button', view = MyView())
 
+            
         @self.tree.context_menu(name = 'Epingler',
                                 guild = self.thalos_guild)
         @app_commands.checks.has_role('Administrateurs')
@@ -169,6 +119,8 @@ class DiscordClient:
             except discord.errors.HTTPException as e:
                 await interaction.response.send_message(e, ephemeral = True)
 
+
+                
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild)
         async def give_role(interaction: discord.Interaction,
@@ -191,7 +143,36 @@ class DiscordClient:
                     raise
                 
             await interaction.response.send_message(message, ephemeral = True)
-                            
+
+
+        @app_commands.checks.has_role('Administrateurs')
+        @self.tree.command(guild = self.thalos_guild)
+        async def check_member(interaction: discord.Interaction):
+            class IDModal(discord.ui.Modal, title = 'Informations'):
+                nom = discord.ui.TextInput(label = 'Nom')
+                prenom = discord.ui.TextInput(label = 'Prénom')
+                
+                async def on_submit(self, interaction: discord.Interaction):
+                    nom = self.nom
+                    prenom = self.prenom
+                    ha_client = self.parent_client.helloasso_client
+                    is_member = await ha_client.get_membership(
+                        first_name = prenom,
+                        last_name = nom
+                    )
+                    is_member = True
+                    if is_member:
+                        return_message = f"{prenom} {nom} is a member"
+                    else:
+                        return_message = f"{prenom} {nom} is not a member"
+                    await interaction.response.send_message(return_message,
+                                                            ephemeral = True)
+
+
+
+            modal = IDModal()
+            await interaction.response.send_modal(modal)
+
         
         @self.tree.command(guild = self.thalos_guild)
         async def testing_form(interaction: discord.Interaction):
