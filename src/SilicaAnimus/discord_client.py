@@ -15,6 +15,33 @@ from google_sheets_client import GoogleSheetsClient, MemberInfo
 
 load_dotenv()
 
+class Template(discord.Embed):
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.colour = discord.Colour.dark_red()
+
+class IDModal(discord.ui.Modal, title = 'Informations'):
+    nom = discord.ui.TextInput(label = 'Nom')
+    prenom = discord.ui.TextInput(label = 'Prénom')
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        nom = self.nom
+        prenom = self.prenom
+        ha_client = self.parent_client.helloasso_client
+        is_member = await ha_client.get_membership(
+            first_name = prenom,
+            last_name = nom
+        )
+        is_member = True
+        if is_member:
+            return_message = f"{prenom} {nom} is a member"
+        else:
+            return_message = f"{prenom} {nom} is not a member"
+        await interaction.response.send_message(return_message,
+                                                ephemeral = True)
+
+        
 
 class DiscordClient:
     """The Discord client class"""
@@ -50,32 +77,30 @@ class DiscordClient:
         # Commands
         @self.tree.command(guild = self.thalos_guild)
         async def ping(interaction: discord.Interaction):
-            embed = discord.Embed(
+
+            embed = Template(
                 title = 'Pong !',
                 description = f'Bot ping is {round(1000*self.client.latency)} ms',
-                color = discord.Colour.dark_red()
-                )
+            )
+            
             await interaction.response.send_message(embed = embed)
             
             
         @self.tree.command(guild = self.thalos_guild)
         async def echo(interaction: discord.Interaction, text: str):
-            embed = discord.Embed(
-                title = 'Echo...',
+            embed = Template(
                 description = text,
-                color = discord.Colour.dark_red()
                 )
             await interaction.response.send_message(embed = embed)
 
             
         @self.tree.command(guild = self.thalos_guild)
         async def my_roles(interaction: discord.Interaction):
-            embed = discord.Embed(
+            embed = Template(
                 title = 'Your roles are : ', 
                 description = ''.join(
-                    [role.name + '\n' for role in interaction.user.roles[::-1]]
+                    [role.mention + '\n' for role in interaction.user.roles[::-1]]
                 ),
-                color = discord.Colour.dark_red()
                 )
             await interaction.response.send_message(embed = embed)
 
@@ -84,9 +109,8 @@ class DiscordClient:
         async def whois(interaction: discord.Interaction,
                         role: discord.Role):
 
-            embed = discord.Embed(
+            embed = Template(
                 description = f'Les membres ayant le role {role.mention} sont :', 
-                color = discord.Colour.dark_red()
                 )
             max_fields = 25
             number_by_field = len(role.members) // max_fields + 1
@@ -96,7 +120,7 @@ class DiscordClient:
                     [member.mention + '\n'
                      for member in role.members[i::max_fields]]))
             await interaction.response.send_message(embed = embed)
-            
+        
         class MyView(discord.ui.View):
             @discord.ui.button(label = 'Click me !')
             async def button_callback(self, interaction, button):
@@ -114,7 +138,8 @@ class DiscordClient:
                       message: discord.Message):
             try:
                 await message.pin()
-                await interaction.response.send_message('Message épinglé !',
+                embed = Template(description = 'Message épinglé !')
+                await interaction.response.send_message(embed = embed,
                                                         ephemeral = True)
             except discord.errors.HTTPException as e:
                 await interaction.response.send_message(e, ephemeral = True)
@@ -133,43 +158,27 @@ class DiscordClient:
                     await member.add_roles(role_given)
                     message = (
                         message
-                        + f'Giving role {role_given.name} to {member.name}\n'
+                        + f'Le role {role_given.mention} est accordé à {member.mention}\n'
                         )
                     
                 except Exception as e:
                     message += str(e)
-                    await interaction.response.send_message(
-                        message, ephemeral = True)
+                    embed = Template(
+                        title = 'Une erreur est survenue...',
+                        description = message
+                        )
+                    await interaction.response.send_message(embed = embed)
                     raise
-                
-            await interaction.response.send_message(message, ephemeral = True)
+
+            embed = Template(
+                title = 'Affectation de roles :',
+                description = message)
+            await interaction.response.send_message(embed = embed)
 
 
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild)
         async def check_member(interaction: discord.Interaction):
-            class IDModal(discord.ui.Modal, title = 'Informations'):
-                nom = discord.ui.TextInput(label = 'Nom')
-                prenom = discord.ui.TextInput(label = 'Prénom')
-                
-                async def on_submit(self, interaction: discord.Interaction):
-                    nom = self.nom
-                    prenom = self.prenom
-                    ha_client = self.parent_client.helloasso_client
-                    is_member = await ha_client.get_membership(
-                        first_name = prenom,
-                        last_name = nom
-                    )
-                    is_member = True
-                    if is_member:
-                        return_message = f"{prenom} {nom} is a member"
-                    else:
-                        return_message = f"{prenom} {nom} is not a member"
-                    await interaction.response.send_message(return_message,
-                                                            ephemeral = True)
-
-
-
             modal = IDModal()
             await interaction.response.send_modal(modal)
 
@@ -193,7 +202,7 @@ class DiscordClient:
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
             await self.client.tree.sync(guild = self.thalos_guild)
-            self.logger.info("Admin commands added")
+            self.logger.info("Commands added")
 
         @self.client.event
         async def on_message(message) -> None:
