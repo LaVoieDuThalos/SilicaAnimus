@@ -35,6 +35,15 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
         #     last_name = nom
         # )
         is_member = True
+        if is_member:
+            return_message = f"{prenom} {nom} is a member"
+        else:
+            return_message = f"{prenom} {nom} is not a member"
+        embed = MessageTemplate(
+            title = 'Vérification du membre :',
+            description = return_message)
+        await interaction.response.send_message(embed = embed, 
+                                                ephemeral = True)        
 
 
 class BureauCog(commands.Cog):
@@ -47,7 +56,6 @@ class BureauCog(commands.Cog):
         self.logger = logging.getLogger(type(self).__name__)
 
     @commands.command()
-    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
     async def nom_membre(self, ctx, *arg, **kwargs):
         """This command gets the name of the person from the google sheet"""
 
@@ -70,16 +78,8 @@ class BureauCog(commands.Cog):
             )
         else:
             await ctx.channel.send(f"{tokens[1]} n'est pas dans la google sheet")
->>>>>>> origin/main
-        if is_member:
-            return_message = f"{prenom} {nom} is a member"
-        else:
-            return_message = f"{prenom} {nom} is not a member"
-        embed = MessageTemplate(
-            title = 'Vérification du membre :',
-            description = return_message)
-        await interaction.response.send_message(embed = embed, 
-                                                ephemeral = True)
+
+
 
         
 
