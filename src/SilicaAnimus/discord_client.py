@@ -48,7 +48,7 @@ class MessageTemplate(discord.Embed):
         self.colour = discord.Colour.dark_red()
         self.set_footer(icon_url = (
             'https://voie-du-thalos.org/wp-content/uploads/2023/12/'
-            + 'Logo_texte.png',
+            + 'Logo_texte.png'),
                         text = 'Application discord pour La Voie du Thalos')
 
 class CheckModal(discord.ui.Modal, title = 'Informations'):
