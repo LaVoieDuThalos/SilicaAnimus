@@ -1,8 +1,9 @@
 import itertools as itt
+import functools
 import logging
 from os import getenv
 import asyncio
-import typing
+from typing import Union, Text
 from dotenv import load_dotenv
 
 import discord
@@ -14,6 +15,31 @@ from helloasso_client import HelloAssoClient
 from google_sheets_client import GoogleSheetsClient, MemberInfo
 
 load_dotenv()
+
+
+def logging_command(logger):
+    """ write logs when activating commands. Not working on some commands
+    for unknown reason"""
+    def Inner(command):
+        
+        @functools.wraps(command)
+        async def command_with_logs(interaction: discord.Interaction,
+                                    *args: Union[None, str,
+                                                 discord.Member,
+                                                 discord.User,
+                                                 discord.Role]):
+            log_message = (f'Command {command.__name__} called '
+                           + f'by {interaction.user.name}')
+            for arg in args:
+                log_message += f'with argument {arg}'
+
+            logger.info(log_message)
+            await command(interaction,*args)
+            logger.info(f'Command {command.__name__} finished')
+
+        return command_with_logs
+    return Inner
+    
 
 class MessageTemplate(discord.Embed):
     def __init__(self, *args, **kwargs):
@@ -29,12 +55,12 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
     async def on_submit(self, interaction: discord.Interaction):
         nom = self.nom
         prenom = self.prenom
-        # ha_client = client.helloasso_client
-        # is_member = await ha_client.get_membership(
-        #     first_name = prenom,
-        #     last_name = nom
-        # )
-        is_member = True
+        ha_client = interaction.client.parent_client.helloasso_client
+        is_member = await ha_client.get_membership(
+            first_name = prenom,
+            last_name = nom
+        )
+
         if is_member:
             return_message = f"{prenom} {nom} is a member"
         else:
@@ -102,13 +128,14 @@ class DiscordClient:
         self.helloasso_client: HelloAssoClient = helloasso_client
         self.gsheet_client: GoogleSheetsClient = gsheet_client
 
-        self.client = commands.Bot(command_prefix = '?', intents = self.intents)
+        self.client = commands.Bot(command_prefix = '!', intents = self.intents)
+        self.client.parent_client = self
         self.tree = self.client.tree
         
         self.logger = logging.getLogger(__name__)
 
         self.token = token
-        self.thalos_guild = None#discord.Object(getenv('THALOS_GUILD_ID'))
+        self.thalos_guild = None
         self.thalos_role = None
 
         self.start_future = None
@@ -116,11 +143,12 @@ class DiscordClient:
 
         # Commands
         @self.tree.command(guild = self.thalos_guild)
+        @logging_command(self.logger)
         async def ping(interaction: discord.Interaction):
-
             embed = MessageTemplate(
                 title = 'Pong !',
-                description = f'Bot ping is {round(1000*self.client.latency)} ms',
+                description = (
+                    f'Bot ping is {round(1000*self.client.latency)} ms'),
             )
             
             await interaction.response.send_message(embed = embed)
@@ -135,6 +163,7 @@ class DiscordClient:
 
             
         @self.tree.command(guild = self.thalos_guild)
+        @logging_command(self.logger)        
         async def my_roles(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Your roles are : ', 
@@ -198,7 +227,8 @@ class DiscordClient:
                     await member.add_roles(role_given)
                     message = (
                         message
-                        + f'Le role {role_given.mention} est accordé à {member.mention}\n'
+                        + f'Le role {role_given.mention} '
+                        + f'est accordé à {member.mention}\n'
                         )
                     
                 except Exception as e:
@@ -218,6 +248,7 @@ class DiscordClient:
 
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild)
+        @logging_command(logger = self.logger)
         async def check_member(interaction: discord.Interaction):
             data = {'prenom' : '',
                     'nom' : ''}
@@ -225,20 +256,33 @@ class DiscordClient:
             await interaction.response.send_modal(modal)
 
         
-        @self.tree.command(guild = self.thalos_guild)
-        async def testing_form(interaction: discord.Interaction):
+        @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
+        @self.tree.context_menu(name = 'Informations utilisateur',
+                                guild = self.thalos_guild)
+        async def info(interaction: discord.Interaction,
+                       member: discord.Member):
+            self.logger.info(f'context info called by {interaction.user.name}')
+
+            first_name = 'INCONNU'
+            last_name = 'INCONNU'
+
+            member_info: MemberInfo = (
+                await self.gsheet_client.get_member_by_discord_name(
+                    member.name)
+                )
+
+            if member_info.in_spreadsheet:
+                first_name = member_info.first_name
+                last_name = member_info.last_name
             
-            class MyModal(discord.ui.Modal, title = 'Informations'):
-                nom = discord.ui.TextInput(label = 'Nom')
-                prenom = discord.ui.TextInput(label = 'Prénom')
-
-                async def on_submit(self, interaction: discord.Interaction):
-                    await interaction.response.send_message(f'Merci {self.nom} {self.prenom}')
-
-
-            modal = MyModal()
-            await interaction.response.send_modal(modal)
-
+            embed = MessageTemplate(title = "Informations sur l'utilisateur :")
+            embed.add_field(name = 'Pseudo discord', value = member.mention)
+            embed.add_field(name = 'Nom', value = last_name)
+            embed.add_field(name = 'Prénom', value = first_name)
+                                    
+            await interaction.response.send_message(embed = embed, ephemeral = True)
+                            
+            
         # Events
         @self.client.event
         async def on_ready() -> None:
@@ -246,10 +290,7 @@ class DiscordClient:
             await self.client.tree.sync(guild = self.thalos_guild)
             self.logger.info("Commands added")
 
-
-            await self.client.add_cog(BureauCog(self))
-            self.logger.info("Bureau commands added")
-
+            
         @self.client.event
         async def on_message(message) -> None:
             self.logger.debug(
