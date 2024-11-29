@@ -30,7 +30,8 @@ class GoogleSheetsClient:
         self.logger = logging.getLogger(__name__)
 
         self.google_service = googleapiclient.discovery.build(
-            "sheets", "v4", credentials=self.credentials
+            "sheets", "v4", credentials=self.credentials,
+            cache_discovery = False
         )
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
