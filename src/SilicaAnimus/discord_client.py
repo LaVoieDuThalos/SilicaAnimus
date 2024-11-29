@@ -261,6 +261,7 @@ class DiscordClient:
                     'nom' : ''}
             modal = CheckModal()
             await interaction.response.send_modal(modal)
+            await modal.wait()
 
         
         @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
