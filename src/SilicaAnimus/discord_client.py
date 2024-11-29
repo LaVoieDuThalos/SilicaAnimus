@@ -49,11 +49,14 @@ class MessageTemplate(discord.Embed):
         self.set_footer(icon_url = (
             'https://voie-du-thalos.org/wp-content/uploads/2023/12/'
             + 'Original10-1.png'),
-                        text = 'Application discord pour La Voie du Thalos')
+                        text = 'Application Discord pour La Voie du Thalos')
 
 class CheckModal(discord.ui.Modal, title = 'Informations'):
-    nom = discord.ui.TextInput(label = 'Nom')
-    prenom = discord.ui.TextInput(label = 'Prénom')
+    prenom = discord.ui.TextInput(label = 'Prénom',
+                                  placeholder = 'Paul')
+    nom = discord.ui.TextInput(label = 'Nom',
+                               placeholder = 'Bismuth')
+
 
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -61,14 +64,14 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
         prenom = self.prenom
         ha_client = interaction.client.parent_client.helloasso_client
         is_member = await ha_client.get_membership(
-            first_name = prenom,
-            last_name = nom
+            first_name = prenom.value,
+            last_name = nom.value
         )
 
         if is_member:
-            return_message = f"{prenom} {nom} is a member"
+            return_message = f"{prenom.value} {nom.value} est adhérent"
         else:
-            return_message = f"{prenom} {nom} is not a member"
+            return_message = f"{prenom.value} {nom.value} n'est pas adhérent"
         embed = MessageTemplate(
             title = 'Vérification du membre :',
             description = return_message)
