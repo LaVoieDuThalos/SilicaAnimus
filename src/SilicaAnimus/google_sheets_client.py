@@ -109,7 +109,7 @@ class GoogleSheetsClient:
             if len(values[row_index]) < 4:
                 continue
 
-            if values[row_index][3].lower() == discord_name:
+            if values[row_index][2].lower() == discord_name:
                 member_info.in_spreadsheet = True
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
