@@ -79,43 +79,6 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
                                                 ephemeral = True)        
 
 
-class BureauCog(commands.Cog):
-    """Commands used to get information the Bureau"""
-
-    def __init__(self, parent_client):
-        super().__init__()
-
-        self.parent_client = parent_client
-        self.logger = logging.getLogger(type(self).__name__)
-
-    @commands.command()
-    async def nom_membre(self, ctx, *arg, **kwargs):
-        """This command gets the name of the person from the google sheet"""
-
-        self.logger.info("Running nom_membre command")
-        tokens = ctx.message.content.split(" ")
-        if len(tokens) != 2:
-            self.logger.warning("Wrong check member command")
-            await ctx.channel.send(
-                "Invoke the command with !nom_membre *pseudo du membre*"
-            )
-            return
-
-        member_info: MemberInfo = (
-            await self.parent_client.gsheet_client.get_member_by_discord_name(tokens[1])
-        )
-
-        if member_info.in_spreadsheet:
-            await ctx.channel.send(
-                f"{tokens[1]} est {member_info.first_name} {member_info.last_name}"
-            )
-        else:
-            await ctx.channel.send(f"{tokens[1]} n'est pas dans la google sheet")
-
-
-
-        
-
 class DiscordClient:
     """The Discord client class"""
 
