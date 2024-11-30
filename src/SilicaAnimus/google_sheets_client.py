@@ -78,9 +78,7 @@ class GoogleSheetsClient:
             if lowered_names == [last_name.lower(), first_name.lower()]:
                 member_info.in_spreadsheet = True
                 if len(values) >= 3:
-                    member_info.server_nickname = values[row_index][2]
-                if len(values) >= 4:
-                    member_info.discord_nickname = values[row_index][3]
+                    member_info.discord_nickname = values[row_index][2]
 
                 return member_info
 
@@ -112,7 +110,7 @@ class GoogleSheetsClient:
                 member_info.in_spreadsheet = True
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
-                member_info.server_nickname = values[row_index][2]
+                member_info.discord_nickname = values[row_index][2]
 
                 return member_info
 
