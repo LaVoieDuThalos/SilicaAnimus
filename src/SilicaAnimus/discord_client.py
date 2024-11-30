@@ -112,7 +112,11 @@ class DiscordClient:
         self.run = True
 
         # Commands
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Envoie un signal à l'application et affiche le temps de
+                           latence
+                           """)
         @logging_command(self.logger)
         async def ping(interaction: discord.Interaction):
             embed = MessageTemplate(
@@ -124,7 +128,10 @@ class DiscordClient:
             await interaction.response.send_message(embed = embed)
             
             
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           L'application répète le message envoyé
+                           """)
         async def echo(interaction: discord.Interaction, text: str):
             embed = MessageTemplate(
                 description = text,
@@ -132,7 +139,10 @@ class DiscordClient:
             await interaction.response.send_message(embed = embed)
 
             
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Fais la liste des rôles possédés par l'utilisateur
+                           """)
         @logging_command(self.logger)        
         async def my_roles(interaction: discord.Interaction):
             embed = MessageTemplate(
@@ -144,7 +154,10 @@ class DiscordClient:
             await interaction.response.send_message(embed = embed)
 
             
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Affiche les utilisateurs ayant le rôle fourni en paramètre
+                           """)
         async def whois(interaction: discord.Interaction,
                         role: discord.Role):
 
@@ -186,7 +199,11 @@ class DiscordClient:
 
                 
         @app_commands.checks.has_role('Administrateurs')
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Donne un rôle à tous les membres ayant le rôle fourni en
+                           paramètre
+                           """)
         async def give_role(interaction: discord.Interaction,
                             role_given: discord.Role,
                             user_group: discord.Role):
@@ -217,7 +234,10 @@ class DiscordClient:
 
 
         @app_commands.checks.has_role('Administrateurs')
-        @self.tree.command(guild = self.thalos_guild)
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Vérifie si une personne est adhérente de l'association
+                           """)
         @logging_command(logger = self.logger)
         async def check_member(interaction: discord.Interaction):
             data = {'prenom' : '',
