@@ -132,6 +132,8 @@ class DiscordClient:
                            description = """
                            L'application répète le message envoyé
                            """)
+        @app_commands.describe(text = 'Texte à répéter')
+        @app_commands.rename(text = 'texte')
         async def echo(interaction: discord.Interaction, text: str):
             embed = MessageTemplate(
                 description = text,
@@ -158,6 +160,8 @@ class DiscordClient:
                            description = """
                            Affiche les utilisateurs ayant le rôle fourni en paramètre
                            """)
+        @app_commands.rename(role = 'rôle')
+        @app_commands.describe(role =  'Role dont il faut lister les membres')
         async def whois(interaction: discord.Interaction,
                         role: discord.Role):
 
@@ -173,14 +177,6 @@ class DiscordClient:
                      for member in role.members[i::max_fields]]))
             await interaction.response.send_message(embed = embed)
         
-        class MyView(discord.ui.View):
-            @discord.ui.button(label = 'Click me !')
-            async def button_callback(self, interaction, button):
-                await interaction.response.send_message('You clicked !!')
-                
-        @self.tree.command(guild = self.thalos_guild)
-        async def testing_button(interaction: discord.Interaction):
-            await interaction.response.send_message('My button', view = MyView())
 
             
         @self.tree.context_menu(name = 'Epingler',
@@ -204,6 +200,9 @@ class DiscordClient:
                            Donne un rôle à tous les membres ayant le rôle fourni en
                            paramètre
                            """)
+        @app_commands.describe(role_given = 'Rôle à donner',
+                               user_group = """Groupe d'utilisateurs recevant
+                               le nouveau rôle""")
         async def give_role(interaction: discord.Interaction,
                             role_given: discord.Role,
                             user_group: discord.Role):
@@ -272,6 +271,26 @@ class DiscordClient:
             embed.add_field(name = 'Prénom', value = first_name)
                                     
             await interaction.response.send_message(embed = embed, ephemeral = True)
+
+        class MyView(discord.ui.View):
+            @discord.ui.button(label = 'Je cherche un adversaire')
+            async def button_callback(self, interaction, button):
+                content = interaction.message.content
+                edit = content + f'\n{interaction.user.mention} cherche un adversaire'
+                await interaction.message.edit(content = edit)
+            @discord.ui.button(label = 'Rejoindre une partie')
+            async def button_callback(self, interaction, button):
+                content = interaction.message.content
+                edit = content + f'\n{interaction.user.mention} a rejoint une partie'
+                await interaction.message.edit(content = edit)                
+                
+        @self.tree.command(guild = self.thalos_guild)
+        async def make_table(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Organisation du 14/12/24')
+            await interaction.response.send_message(embed = embed,
+                                                    view = MyView())
+        
                             
             
         # Events
