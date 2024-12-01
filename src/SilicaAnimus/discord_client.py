@@ -114,8 +114,8 @@ class DiscordClient:
         # Commands
         @self.tree.command(guild = self.thalos_guild,
                            description = """
-                           Envoie un signal à l'application et affiche le temps de
-                           latence
+                           Envoie un signal à l'application et affiche le
+                           temps de latence
                            """)
         @logging_command(self.logger)
         async def ping(interaction: discord.Interaction):
@@ -158,7 +158,8 @@ class DiscordClient:
             
         @self.tree.command(guild = self.thalos_guild,
                            description = """
-                           Affiche les utilisateurs ayant le rôle fourni en paramètre
+                           Affiche les utilisateurs ayant le rôle fourni en
+                           paramètre
                            """)
         @app_commands.rename(role = 'rôle')
         @app_commands.describe(role =  'Role dont il faut lister les membres')
@@ -166,7 +167,8 @@ class DiscordClient:
                         role: discord.Role):
 
             embed = MessageTemplate(
-                description = f'Les membres ayant le role {role.mention} sont :', 
+                description = (f'Les membres ayant le role {role.mention}'
+                               + 'sont :'), 
                 )
             max_fields = 25
             number_by_field = len(role.members) // max_fields + 1
@@ -197,8 +199,8 @@ class DiscordClient:
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild,
                            description = """
-                           Donne un rôle à tous les membres ayant le rôle fourni en
-                           paramètre
+                           Donne un rôle à tous les membres ayant le rôle
+                           fourni en paramètre
                            """)
         @app_commands.describe(role_given = 'Rôle à donner',
                                user_group = """Groupe d'utilisateurs recevant
@@ -235,8 +237,8 @@ class DiscordClient:
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild,
                            description = """
-                           Vérifie si une personne est adhérente de l'association
-                           """)
+                           Vérifie si une personne est adhérente de
+                           l'association """)
         @logging_command(logger = self.logger)
         async def check_member(interaction: discord.Interaction):
             data = {'prenom' : '',
@@ -273,21 +275,67 @@ class DiscordClient:
             await interaction.response.send_message(embed = embed, ephemeral = True)
 
         class MyView(discord.ui.View):
-            @discord.ui.button(label = 'Je cherche un adversaire')
-            async def button_callback(self, interaction, button):
-                content = interaction.message.content
-                edit = content + f'\n{interaction.user.mention} cherche un adversaire'
-                await interaction.message.edit(content = edit)
-            @discord.ui.button(label = 'Rejoindre une partie')
-            async def button_callback(self, interaction, button):
-                content = interaction.message.content
-                edit = content + f'\n{interaction.user.mention} a rejoint une partie'
-                await interaction.message.edit(content = edit)                
+            @discord.ui.button(label = 'Je cherche un adversaire',
+                               style = discord.ButtonStyle.primary)
+            async def button_search(self, interaction, button):
+                embed = interaction.message.embeds[0]
+                for i, field in enumerate(embed.fields):
+                    if field.name == 'Joueurs en attente':
+                        my_field = field
+                        field_ID = i
+
+                new_user = interaction.user.mention
+                content = my_field.value
+                if new_user not in my_field.value:
+                    content += f'\n{new_user}'
+
+                embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                                   value = content,
+                                   inline = False)
+                await interaction.response.edit_message(embed = embed)
+                
+            # @discord.ui.button(label = 'Rejoindre une partie',
+            #                    style = discord.ButtonStyle.success)
+            # async def button_join(self, interaction, button):
+            #     content = interaction.message.content
+            #     print(interaction.message.embeds[0])
+            #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
+            #     await interaction.message.edit(content = edit)
+
+                
+            @discord.ui.button(label = 'Se retirer',
+                               style = discord.ButtonStyle.danger)
+            async def button_exit(self, interaction, button):
+                embed = interaction.message.embeds[0]
+                for i, field in enumerate(embed.fields):
+                    if field.name == "Joueurs en attente":
+                        my_field = field
+                        field_ID = i
+
+                user = interaction.user.mention
+                content = my_field.value
+                list_val = my_field.value.split('\n')
+                for val in list_val:
+                    if user in val:
+                        list_val.remove(val)
+
+                embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                                   value = '\n'.join(list_val),
+                                   inline = False)
+
+                await interaction.response.edit_message(embed = embed)
+                
                 
         @self.tree.command(guild = self.thalos_guild)
         async def make_table(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Organisation du 14/12/24')
+            embed.add_field(name = 'Parties prévues (1v1)',
+                            value = '',
+                            inline = False)
+            embed.add_field(name = 'Joueurs en attente',
+                            value = '',
+                            inline = False)
             await interaction.response.send_message(embed = embed,
                                                     view = MyView())
         
