@@ -51,6 +51,7 @@ class MessageTemplate(discord.Embed):
             + 'Original10-1.png'),
                         text = 'Application Discord pour La Voie du Thalos')
 
+
 class CheckModal(discord.ui.Modal, title = 'Informations'):
     prenom = discord.ui.TextInput(label = 'Prénom',
                                   placeholder = 'Paul')
@@ -78,6 +79,59 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
         await interaction.response.send_message(embed = embed, 
                                                 ephemeral = True)        
 
+class MyView(discord.ui.View):
+    @discord.ui.button(label = 'Je cherche un adversaire',
+                       style = discord.ButtonStyle.primary)
+    async def button_search(self, interaction, button):
+        
+        embed = interaction.message.embeds[0]
+
+        for i, field in enumerate(embed.fields):
+            if field.name == 'Joueurs en attente':
+                my_field = field
+                field_ID = i
+
+        new_user = interaction.user.mention
+        content = my_field.value
+        if new_user not in my_field.value:
+            content += f'\n{new_user}'
+
+        embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                           value = content,
+                           inline = False)
+        await interaction.response.edit_message(embed = embed)
+                
+    # @discord.ui.button(label = 'Rejoindre une partie',
+    #                    style = discord.ButtonStyle.success)
+    # async def button_join(self, interaction, button):
+    #     content = interaction.message.content
+    #     print(interaction.message.embeds[0])
+    #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
+    #     await interaction.message.edit(content = edit)
+
+                
+    @discord.ui.button(label = 'Se retirer',
+                       style = discord.ButtonStyle.danger)
+    async def button_exit(self, interaction, button):
+        embed = interaction.message.embeds[0]
+        for i, field in enumerate(embed.fields):
+            if field.name == "Joueurs en attente":
+                my_field = field
+                field_ID = i
+
+        user = interaction.user.mention
+        content = my_field.value
+        list_val = my_field.value.split('\n')
+        for val in list_val:
+            if user in val:
+                list_val.remove(val)
+
+        embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                           value = '\n'.join(list_val),
+                           inline = False)
+
+        await interaction.response.edit_message(embed = embed)
+
 
 class DiscordClient:
     """The Discord client class"""
@@ -101,6 +155,7 @@ class DiscordClient:
         self.client = commands.Bot(command_prefix = '!', intents = self.intents)
         self.client.parent_client = self
         self.tree = self.client.tree
+
         
         self.logger = logging.getLogger(__name__)
 
@@ -274,59 +329,10 @@ class DiscordClient:
                                     
             await interaction.response.send_message(embed = embed, ephemeral = True)
 
-        class MyView(discord.ui.View):
-            @discord.ui.button(label = 'Je cherche un adversaire',
-                               style = discord.ButtonStyle.primary)
-            async def button_search(self, interaction, button):
-                embed = interaction.message.embeds[0]
-                for i, field in enumerate(embed.fields):
-                    if field.name == 'Joueurs en attente':
-                        my_field = field
-                        field_ID = i
-
-                new_user = interaction.user.mention
-                content = my_field.value
-                if new_user not in my_field.value:
-                    content += f'\n{new_user}'
-
-                embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                                   value = content,
-                                   inline = False)
-                await interaction.response.edit_message(embed = embed)
-                
-            # @discord.ui.button(label = 'Rejoindre une partie',
-            #                    style = discord.ButtonStyle.success)
-            # async def button_join(self, interaction, button):
-            #     content = interaction.message.content
-            #     print(interaction.message.embeds[0])
-            #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
-            #     await interaction.message.edit(content = edit)
-
-                
-            @discord.ui.button(label = 'Se retirer',
-                               style = discord.ButtonStyle.danger)
-            async def button_exit(self, interaction, button):
-                embed = interaction.message.embeds[0]
-                for i, field in enumerate(embed.fields):
-                    if field.name == "Joueurs en attente":
-                        my_field = field
-                        field_ID = i
-
-                user = interaction.user.mention
-                content = my_field.value
-                list_val = my_field.value.split('\n')
-                for val in list_val:
-                    if user in val:
-                        list_val.remove(val)
-
-                embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                                   value = '\n'.join(list_val),
-                                   inline = False)
-
-                await interaction.response.edit_message(embed = embed)
                 
                 
         @self.tree.command(guild = self.thalos_guild)
+        @logging_command(logger = self.logger)
         async def make_table(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Organisation du 14/12/24')
@@ -345,7 +351,9 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
-            await self.client.tree.sync(guild = self.thalos_guild)
+            for command in await self.client.tree.sync(
+                    guild = self.thalos_guild):
+                self.logger.info(f'Command "{command.name}" synced to the app')
             self.logger.info("Commands added")
 
             
