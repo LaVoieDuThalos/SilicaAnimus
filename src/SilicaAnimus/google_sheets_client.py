@@ -273,7 +273,7 @@ class GoogleSheetsClient:
                 member_sheet_row = names_list.index(name_tuple) + 1
                 update_data.append(
                     {
-                        "range": f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
+                        "range": f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
                         "values": [insert_values[name_tuple]],
                     }
                 )

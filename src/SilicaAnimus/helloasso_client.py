@@ -133,7 +133,7 @@ class HelloAssoClient:
         members_request_data = members_request_data.encode()
         request_url = (
             f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/"
-            + f"{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders"
+            + f'{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders'
             + "?pageSize=20"
             + "&withDetails=false"
         )
