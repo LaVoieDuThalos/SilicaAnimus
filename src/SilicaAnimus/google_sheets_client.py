@@ -47,7 +47,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .get(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1:F1000",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1:F1000',
                 )
                 .execute()
             )
@@ -206,7 +206,7 @@ class GoogleSheetsClient:
                     self.sheets.values()
                     .append(
                         spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
+                        range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
                         valueInputOption="USER_ENTERED",
                         body=body,
                     )
@@ -224,7 +224,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .update(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )
@@ -299,7 +299,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .append(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )
