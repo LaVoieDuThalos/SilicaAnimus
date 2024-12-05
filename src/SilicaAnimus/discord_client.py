@@ -329,31 +329,62 @@ class DiscordClient:
             embed = MessageTemplate(
                 title = """ Mise à jour des adhérents sur le Discord""")
             
-            to_mem_str = ', '.join([member for member in to_member])
+            to_mem_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_member])
             if len(to_mem_str) > 1000:
                 self.logger.info(f"hidden users to member :\n{to_mem_str}")
                 to_mem_str = f'{len(to_member)} utilisateurs concernés'
-            to_unmem_str = ', '.join([member for member in to_unmember])
+                
+            to_unmem_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_unmember])
             if len(to_unmem_str) > 1000:
                 self.logger.info(f"hidden users to unmember :\n{to_unmem_str}")
                 to_unmem_str = f'{len(to_unmember)} utilisateurs concernés'
-            to_keep_str = ', '.join([member for member in to_keep])
+                
+            to_keep_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_keep])
             if len(to_keep_str) > 1000:
                 self.logger.info(f"hidden users to keep :\n{to_keep_str}")
                 
                 to_keep_str = f'{len(to_keep)} utilisateurs concernés'
                 
-            embed.add_field(name = 'Ces utilisateurs gagneront le role membre :',
-                            value = to_mem_str,
-                            inline = False)
-            embed.add_field(name = 'Ces utilisateurs conserveront leur role membre :',
-                            value = to_keep_str,
-                            inline = False)
-            embed.add_field(name = 'Ces utilisateurs perdront leur role membre :',
-                            value = to_unmem_str,
-                            inline = False)
+            embed.add_field(
+                name = 'Ces utilisateurs gagneront le role membre :',
+                value = to_mem_str,
+                inline = False)
+            embed.add_field(
+                name = 'Ces utilisateurs conserveront leur role membre :',
+                value = to_keep_str,
+                inline = False)
+            embed.add_field(
+                name = 'Ces utilisateurs perdront leur role membre :',
+                value = to_unmem_str,
+                inline = False)
 
-            await interaction.response.send_message(embed = embed)
+            class Buttons(discord.ui.View):
+                @discord.ui.button(label = 'Afficher les membres masqués',
+                                   style = discord.ButtonStyle.primary)
+                async def button_display(self, interaction, button):
+                    pass
+                
+                @discord.ui.button(label = 'Confirmer',
+                                   style = discord.ButtonStyle.success)
+                async def button_confirm(self, interaction, button):
+                    pass
+                
+                @discord.ui.button(label = 'Annuler',
+                                   style = discord.ButtonStyle.danger)
+                async def button_cancel(self, interaction, button):
+                    pass
+                
+           
+            buttons = Buttons()
+
+            await interaction.response.send_message(embed = embed,
+                                                    view = buttons)
 
         
         @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
