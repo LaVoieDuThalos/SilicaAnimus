@@ -152,9 +152,11 @@ class GoogleSheetsClient:
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 if len(values[row_index]) < 4:
+                    members_list.append(member_info)
                     continue
                 member_info.member_last_year = values[row_index][3] == "Oui"
                 if len(values[row_index]) < 5:
+                    members_list.append(member_info)
                     continue
                 member_info.member_current_year = values[row_index][4] == "Oui"
 
