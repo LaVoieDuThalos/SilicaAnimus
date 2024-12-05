@@ -301,6 +301,60 @@ class DiscordClient:
             await interaction.response.send_modal(modal)
             await modal.wait()
 
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Lance la procédure de mise à jour des adhérents sur
+                           le discord""")
+        @logging_command(logger = self.logger)
+        async def update_member_list(interaction: discord.Interaction):
+            role = interaction.guild.get_role(678922012109963294)
+            member_list = await self.gsheet_client.get_members_by_discord_names(
+                [member.name for member in interaction.guild.members])
+
+            to_member = []
+            to_unmember = []
+            to_keep = []
+            unaffected = []
+            for member in member_list:
+                member_obj = interaction.guild.get_member_named(member.discord_nickname)
+                if member.member_current_year and role in member_obj.roles:
+                    to_keep.append(member.discord_nickname)
+                elif member.member_current_year:
+                    to_member.append(member.discord_nickname)
+                elif role in member_obj.roles:
+                    to_unmember.append(member.discord_nickname)
+                else:
+                    unaffected.append(member.discord_nickname)
+
+            embed = MessageTemplate(
+                title = """ Mise à jour des adhérents sur le Discord""")
+            
+            to_mem_str = ', '.join([member for member in to_member])
+            if len(to_mem_str) > 1000:
+                self.logger.info(f"hidden users to member :\n{to_mem_str}")
+                to_mem_str = f'{len(to_member)} utilisateurs concernés'
+            to_unmem_str = ', '.join([member for member in to_unmember])
+            if len(to_unmem_str) > 1000:
+                self.logger.info(f"hidden users to unmember :\n{to_unmem_str}")
+                to_unmem_str = f'{len(to_unmember)} utilisateurs concernés'
+            to_keep_str = ', '.join([member for member in to_keep])
+            if len(to_keep_str) > 1000:
+                self.logger.info(f"hidden users to keep :\n{to_keep_str}")
+                
+                to_keep_str = f'{len(to_keep)} utilisateurs concernés'
+                
+            embed.add_field(name = 'Ces utilisateurs gagneront le role membre :',
+                            value = to_mem_str,
+                            inline = False)
+            embed.add_field(name = 'Ces utilisateurs conserveront leur role membre :',
+                            value = to_keep_str,
+                            inline = False)
+            embed.add_field(name = 'Ces utilisateurs perdront leur role membre :',
+                            value = to_unmem_str,
+                            inline = False)
+
+            await interaction.response.send_message(embed = embed)
+
         
         @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
         @self.tree.context_menu(name = 'Informations utilisateur',
