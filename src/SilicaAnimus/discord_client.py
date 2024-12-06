@@ -328,55 +328,96 @@ class DiscordClient:
 
             embed = MessageTemplate(
                 title = """ Mise à jour des adhérents sur le Discord""")
-            
+
+            # get the user list to member
             to_mem_str = ', '.join(
                 [interaction.guild.get_member_named(member).mention
                  for member in to_member])
-            if len(to_mem_str) > 1000:
-                self.logger.info(f"hidden users to member :\n{to_mem_str}")
-                to_mem_str = f'{len(to_member)} utilisateurs concernés'
-                
+
+            # get members to display 
+            display_mem_l = to_mem_str[:1000].split(',')
+            if len(display_mem_l) > 1:
+                display_mem_l = display_mem_l[:-1]
+            hidden_member_members = len(to_member) - len(display_mem_l)
+
+            # make message
+            to_mem_str_short = (
+                ','.join(display_mem_l)
+                + f'\n{hidden_member_members}')
+            if hidden_member_members <= 1:
+                to_mem_str_short += ' utilisateur masqué'
+            else:
+                to_mem_str_short += ' utilisateurs masqués'
+            
+            # get the user list to unmember    
             to_unmem_str = ', '.join(
                 [interaction.guild.get_member_named(member).mention
                  for member in to_unmember])
-            if len(to_unmem_str) > 1000:
-                self.logger.info(f"hidden users to unmember :\n{to_unmem_str}")
-                to_unmem_str = f'{len(to_unmember)} utilisateurs concernés'
-                
+
+            # get unmembers to display
+            display_unmem_l = to_unmem_str[:1000].split(',')
+            if len(display_unmem_l) > 1:
+                display_unmem_l = display_unmem_l[:-1]
+            hidden_unmem_members = len(to_unmember) - len(display_unmem_l)
+            
+            # make message            
+            to_unmem_str_short = (
+                ','.join(display_unmem_l)
+                + f'\n{hidden_unmem_members}')
+            if hidden_unmem_members <= 1:
+                to_unmem_str_short += ' utilisateur masqué'
+            else:
+                to_unmem_str_short += ' utilisateurs masqués'                
+            
+            # get members unchanged     
             to_keep_str = ', '.join(
                 [interaction.guild.get_member_named(member).mention
                  for member in to_keep])
-            if len(to_keep_str) > 1000:
-                self.logger.info(f"hidden users to keep :\n{to_keep_str}")
-                
-                to_keep_str = f'{len(to_keep)} utilisateurs concernés'
+
+            # get members unchanged to display
+            display_keep_l = to_keep_str[:1000].split(',')
+            if len(display_keep_l) > 1:
+                display_keep_l = display_keep_l[:-1]
+            hidden_keep_members = len(to_keep) - len(display_keep_l)
+            
+            # make message            
+            to_keep_str_short = (
+                ','.join(display_keep_l)
+                + f'\n{hidden_keep_members}')
+            if hidden_keep_members <= 1:
+                to_keep_str_short += ' utilisateur masqué'
+            else:
+                to_keep_str_short += ' utilisateurs masqués'
                 
             embed.add_field(
                 name = 'Ces utilisateurs gagneront le role membre :',
-                value = to_mem_str,
+                value = to_mem_str_short,
                 inline = False)
             embed.add_field(
                 name = 'Ces utilisateurs conserveront leur role membre :',
-                value = to_keep_str,
+                value = to_keep_str_short,
                 inline = False)
             embed.add_field(
                 name = 'Ces utilisateurs perdront leur role membre :',
-                value = to_unmem_str,
+                value = to_unmem_str_short,
                 inline = False)
 
             class Buttons(discord.ui.View):
                 @discord.ui.button(label = 'Afficher les membres masqués',
-                                   style = discord.ButtonStyle.primary)
+                                   style = discord.ButtonStyle.primary,
+                                   disabled = True)
                 async def button_display(self, interaction, button):
                     pass
                 
                 @discord.ui.button(label = 'Confirmer',
-                                   style = discord.ButtonStyle.success)
+                                   style = discord.ButtonStyle.success,
+                                   disabled = True)
                 async def button_confirm(self, interaction, button):
                     pass
                 
                 @discord.ui.button(label = 'Annuler',
-                                   style = discord.ButtonStyle.danger)
+                                   style = discord.ButtonStyle.danger,
+                                   disabled = True)
                 async def button_cancel(self, interaction, button):
                     pass
                 
