@@ -405,19 +405,22 @@ class DiscordClient:
             class Buttons(discord.ui.View):
                 @discord.ui.button(label = 'Afficher les membres masqués',
                                    style = discord.ButtonStyle.primary,
-                                   disabled = True)
+                                   disabled = True,
+                                   custom_id = 'display')
                 async def button_display(self, interaction, button):
                     pass
                 
                 @discord.ui.button(label = 'Confirmer',
                                    style = discord.ButtonStyle.success,
-                                   disabled = True)
+                                   disabled = True,
+                                   custom_id = 'confirm')
                 async def button_confirm(self, interaction, button):
                     pass
                 
                 @discord.ui.button(label = 'Annuler',
                                    style = discord.ButtonStyle.danger,
-                                   disabled = True)
+                                   disabled = True,
+                                   custom_id = 'cancel')
                 async def button_cancel(self, interaction, button):
                     pass
                 
