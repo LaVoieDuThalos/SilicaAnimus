@@ -60,6 +60,8 @@ class MemberProcessView(discord.ui.View):
                        style = discord.ButtonStyle.primary)
     async def button_get(self, interaction: discord.Interaction,
                          button: discord.ui.Button):
+        
+
 
         member_role = interaction.guild.get_role(678922012109963294)
         embed = MessageTemplate()
@@ -70,26 +72,59 @@ class MemberProcessView(discord.ui.View):
         )
 
         if member_role in interaction.user.roles:
+            await interaction.response.defer()            
             embed.description = f"Vous possédez déjà le rôle {member_role.mention}."
-            await interaction.response.send_message(embed = embed,
-                                                    ephemeral = True)
+            await interaction.followup.send(embed = embed, ephemeral = True)
 
-        elif member_info.in_spreadsheet and member_info.member_current_year:
-            await interaction.user.add_roles(member_role)
+        elif member_info.in_spreadsheet:
+            await interaction.response.defer()
+            
+            if await self.client.helloasso_client.get_membership(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name):
+                member_info.member_current_year = True
+                await self.client.gsheet_client.add_member(member_info)
 
-            embed.description = f"Rôle {member_role.mention} ajouté avec succès"
-            await interaction.response.send_message(embed = embed)
+            if member_info.member_current_year:
+                await interaction.user.add_roles(member_role)    
+
+                embed.description = f"Rôle {member_role.mention} ajouté avec succès"
+
+                await interaction.followup.send(embed = embed, ephemeral = True)
+            else:
+                embed.description = f"""Votre compte discord est associé au
+                nom {member_info.last_name}, prénom {member_info.first_name} qui
+                n'est actuellement pas adhérent de l'association. S'il s'agit
+                d'une erreur, merci de contacter un administrateur"""
+                await interaction.followup.send(embed = embed, ephemeral = True)
         else:
             membership = MemberProcessModal()
             await interaction.response.send_modal(membership)
             await membership.wait()
+            
+            member_info.first_name = membership.first_name.value
+            member_info.last_name = membership.last_name.value
+
+            if await self.client.helloasso_client.get_membership(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name):
+                member_info.member_current_year = True
+                await self.client.gsheet_client.add_member(member_info)
+                await interaction.user.add_roles(member_role)
+                embed.description = f"""Rôle {member_role.mention} ajouté
+                avec succès"""
+            else:
+                embed.description = 'ECHEC'
+
+            await membership.interaction.followup.send(
+                embed = embed, ephemeral = True)
 
     @discord.ui.button(label = 'Signaler un problème',
                        style = discord.ButtonStyle.danger)
     async def button_report(self, interaction: discord.Interaction,
                             button: discord.ui.Button):
-        print(await interaction.response.send_message('Contactez un administrateur',
-                                                ephemeral = True))
+        await interaction.response.send_message('Contactez un administrateur',
+                                                ephemeral = True)
         
 class MemberProcessModal(discord.ui.Modal,
                          title = 'Devenir membre sur le discord'):
@@ -97,18 +132,21 @@ class MemberProcessModal(discord.ui.Modal,
         super().__init__(*args, **kwargs)
         self.member_role = 'Membres Thalos'
         
-        self.first_name = discord.ui.TextInput(label = 'Nom')
-        self.last_name = discord.ui.TextInput(label = 'Prénom') 
+        self.first_name = discord.ui.TextInput(label = 'Prénom')
+        self.last_name = discord.ui.TextInput(label = 'Nom') 
         self.add_item(self.first_name)
         self.add_item(self.last_name)
 
 
 
     async def on_submit(self, interaction: discord.Interaction):
+        embed = MessageTemplate(description = """Données envoyées""")
+        self.interaction = interaction
+        await interaction.response.defer()
+        
         
 
-        print(self.first_name.value)
-        print(self.last_name.value)
+
 
 class CheckModal(discord.ui.Modal, title = 'Informations'):
     prenom = discord.ui.TextInput(label = 'Prénom',
