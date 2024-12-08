@@ -50,6 +50,54 @@ class MessageTemplate(discord.Embed):
             'https://voie-du-thalos.org/img/logo.png'),
                         text = 'Application Discord pour La Voie du Thalos')
 
+class MemberProcessView(discord.ui.View):
+
+    def __init__(self, client, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client = client
+
+    @discord.ui.button(label = 'Demander le rôle de membre',
+                       style = discord.ButtonStyle.primary)
+    async def button_get(self, interaction: discord.Interaction,
+                         button: discord.ui.Button):
+
+        member_role = interaction.guild.get_role(678922012109963294)
+        embed = MessageTemplate(
+            description = f"Vous possédez déjà le rôle {member_role.mention}.")
+        if not member_role in interaction.user.roles:
+            membership = MemberProcessModal()
+            await interaction.response.send_modal(membership)
+            await membership.wait()
+            
+        else:
+            await interaction.response.send_message(embed = embed,
+                                                    ephemeral = True)
+    
+    @discord.ui.button(label = 'Signaler un problème',
+                       style = discord.ButtonStyle.danger)
+    async def button_report(self, interaction: discord.Interaction,
+                            button: discord.ui.Button):
+        print(await interaction.response.send_message('Contactez un administrateur',
+                                                ephemeral = True))
+        
+class MemberProcessModal(discord.ui.Modal,
+                         title = 'Devenir membre sur le discord'):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.member_role = 'Membres Thalos'
+        
+        self.first_name = discord.ui.TextInput(label = 'Nom')
+        self.last_name = discord.ui.TextInput(label = 'Prénom') 
+        self.add_item(self.first_name)
+        self.add_item(self.last_name)
+
+
+
+    async def on_submit(self, interaction: discord.Interaction):
+        
+
+        print(self.first_name.value)
+        print(self.last_name.value)
 
 class CheckModal(discord.ui.Modal, title = 'Informations'):
     prenom = discord.ui.TextInput(label = 'Prénom',
@@ -302,6 +350,19 @@ class DiscordClient:
             await modal.wait()
 
         @self.tree.command(guild = self.thalos_guild,
+                           description = """Ajoute le membre au groupe des
+                           adhérents sur le discord""")
+        @logging_command(logger = self.logger)
+        async def get_membership(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Obtenir votre role de membre sur le discord',
+                description = '')
+            buttons = MemberProcessView(timeout = None, client = self.client)
+            await interaction.response.send_message(embed = embed,
+                                                    view = buttons)
+
+            
+        @self.tree.command(guild = self.thalos_guild,
                            description = """
                            Lance la procédure de mise à jour des adhérents sur
                            le discord""")
@@ -419,10 +480,10 @@ class DiscordClient:
                 
                 @discord.ui.button(label = 'Annuler',
                                    style = discord.ButtonStyle.danger,
-                                   disabled = True,
+                                   disabled = False,
                                    custom_id = 'cancel')
                 async def button_cancel(self, interaction, button):
-                    pass
+                    print(interaction)
                 
            
             buttons = Buttons()
