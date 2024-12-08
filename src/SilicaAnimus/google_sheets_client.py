@@ -106,7 +106,7 @@ class GoogleSheetsClient:
         member_info = MemberInfo(discord_nickname=discord_name)
 
         for row_index in range(len(values)):
-            if len(values[row_index]) < 4:
+            if len(values[row_index]) < 3:
                 continue
 
             if values[row_index][2].lower() == discord_name:
@@ -114,6 +114,12 @@ class GoogleSheetsClient:
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 member_info.server_nickname = values[row_index][2]
+                if len(values[row_index]) > 3:
+                    member_info.member_last_year = (
+                        values[row_index][3] == 'Oui')
+                if len(values[row_index]) > 4:
+                    member_info.member_current_year = (
+                        values[row_index][4] == 'Oui')                    
 
                 return member_info
 
