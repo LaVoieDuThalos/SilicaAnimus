@@ -62,17 +62,28 @@ class MemberProcessView(discord.ui.View):
                          button: discord.ui.Button):
 
         member_role = interaction.guild.get_role(678922012109963294)
-        embed = MessageTemplate(
-            description = f"Vous possédez déjà le rôle {member_role.mention}.")
-        if not member_role in interaction.user.roles:
+        embed = MessageTemplate()
+
+        member_info = (
+            await self.client.gsheet_client.get_member_by_discord_name(
+            interaction.user.name)
+        )
+
+        if member_role in interaction.user.roles:
+            embed.description = f"Vous possédez déjà le rôle {member_role.mention}."
+            await interaction.response.send_message(embed = embed,
+                                                    ephemeral = True)
+
+        elif member_info.in_spreadsheet and member_info.member_current_year:
+            await interaction.user.add_roles(member_role)
+
+            embed.description = f"Rôle {member_role.mention} ajouté avec succès"
+            await interaction.response.send_message(embed = embed)
+        else:
             membership = MemberProcessModal()
             await interaction.response.send_modal(membership)
             await membership.wait()
-            
-        else:
-            await interaction.response.send_message(embed = embed,
-                                                    ephemeral = True)
-    
+
     @discord.ui.button(label = 'Signaler un problème',
                        style = discord.ButtonStyle.danger)
     async def button_report(self, interaction: discord.Interaction,
@@ -357,7 +368,8 @@ class DiscordClient:
             embed = MessageTemplate(
                 title = 'Obtenir votre role de membre sur le discord',
                 description = '')
-            buttons = MemberProcessView(timeout = None, client = self.client)
+            buttons = MemberProcessView(timeout = None,
+                                        client = self.client.parent_client)
             await interaction.response.send_message(embed = embed,
                                                     view = buttons)
 
