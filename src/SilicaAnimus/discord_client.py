@@ -65,39 +65,55 @@ class MemberProcessView(discord.ui.View):
 
         member_role = interaction.guild.get_role(678922012109963294)
         embed = MessageTemplate()
+        ephemeral = False
 
         member_info = (
             await self.client.gsheet_client.get_member_by_discord_name(
             interaction.user.name)
         )
 
+        # if the member has the role already
         if member_role in interaction.user.roles:
             await interaction.response.defer()            
-            embed.description = f"Vous possédez déjà le rôle {member_role.mention}."
-            await interaction.followup.send(embed = embed, ephemeral = True)
+            embed.description = (
+                f"Vous possédez déjà le rôle {member_role.mention}.")
+            await interaction.followup.send(embed = embed,
+                                            ephemeral = ephemeral)
 
+        # if the member is in the sheet
         elif member_info.in_spreadsheet:
             await interaction.response.defer()
-            
+
+            # get information about this member, update member_info
             if await self.client.helloasso_client.get_membership(
                     first_name = member_info.first_name,
                     last_name = member_info.last_name):
                 member_info.member_current_year = True
                 await self.client.gsheet_client.add_member(member_info)
 
+
             if member_info.member_current_year:
                 await interaction.user.add_roles(member_role)    
 
-                embed.description = f"Rôle {member_role.mention} ajouté avec succès"
+                embed.description = (
+                    f"Rôle {member_role.mention} ajouté avec succès")
 
-                await interaction.followup.send(embed = embed, ephemeral = True)
+                await interaction.followup.send(embed = embed,
+                                                ephemeral = ephemeral)
+                
+            # if the user is not member of the association this year
             else:
-                embed.description = f"""Votre compte discord est associé au
-                nom {member_info.last_name}, prénom {member_info.first_name} qui
-                n'est actuellement pas adhérent de l'association. S'il s'agit
-                d'une erreur, merci de contacter un administrateur"""
-                await interaction.followup.send(embed = embed, ephemeral = True)
+                embed.description = (
+                    f"Votre compte discord est associé au nom "
+                    + f"{member_info.last_name}, prénom "
+                    + f"{member_info.first_name} qui n'est actuellement pas "
+                    + "adhérent de l'association. S'il s'agit d'une erreur, "
+                    + "merci de contacter un administrateur")
+                await interaction.followup.send(embed = embed,
+                                                ephemeral = ephemeral)
+        # if the member is not in the sheet
         else:
+            #send form
             membership = MemberProcessModal()
             await interaction.response.send_modal(membership)
             await membership.wait()
@@ -105,19 +121,36 @@ class MemberProcessView(discord.ui.View):
             member_info.first_name = membership.first_name.value
             member_info.last_name = membership.last_name.value
 
+            # if the user is member of association
             if await self.client.helloasso_client.get_membership(
                     first_name = member_info.first_name,
                     last_name = member_info.last_name):
                 member_info.member_current_year = True
-                await self.client.gsheet_client.add_member(member_info)
-                await interaction.user.add_roles(member_role)
-                embed.description = f"""Rôle {member_role.mention} ajouté
-                avec succès"""
+                identity_info = await self.client.gsheet_client.get_member_by_name(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name)
+                # if there is already a discord name recorded
+                if len(identity_info.discord_nickname) > 0:
+                    embed.description = (f"Ces nom / prénom sont déjà associés "
+                    + "à un compte discord. Veuillez contacter un "
+                    + "administrateur pour résoudre ce problème")
+                # if there is no discord name recorded
+                else:
+                    member_info.member_last_year = identity_info.member_last_year
+                    await self.client.gsheet_client.add_member(member_info)
+                    await interaction.user.add_roles(member_role)
+                    embed.description = (f"Rôle {member_role.mention} ajouté "
+                    + "avec succès")
+                
+            # if the user is not member of association
             else:
-                embed.description = 'ECHEC'
+                embed.description = (
+                    "Vous n'êtes actuellement pas référencé comme membre de "
+                    + "l'association. S'il s'agit d'une erreur veuillez "
+                    + "contacter un administrateur")
 
             await membership.interaction.followup.send(
-                embed = embed, ephemeral = True)
+                embed = embed, ephemeral = ephemeral)
 
     @discord.ui.button(label = 'Signaler un problème',
                        style = discord.ButtonStyle.danger)
