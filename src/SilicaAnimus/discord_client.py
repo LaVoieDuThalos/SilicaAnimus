@@ -476,10 +476,12 @@ class DiscordClient:
                 [interaction.guild.get_member_named(member).mention
                  for member in to_member])
 
-            # get members to display 
-            display_mem_l = to_mem_str[:1000].split(',')
-            if len(display_mem_l) > 1:
-                display_mem_l = display_mem_l[:-1]
+            # get members to display
+            if len(to_mem_str) > 1000:
+                display_mem_l = to_mem_str[:1000].split(',')[:-1]
+            else:
+                display_mem_l = to_mem_str.split(',')
+
             hidden_member_members = len(to_member) - len(display_mem_l)
 
             # make message
@@ -497,9 +499,11 @@ class DiscordClient:
                  for member in to_unmember])
 
             # get unmembers to display
-            display_unmem_l = to_unmem_str[:1000].split(',')
-            if len(display_unmem_l) > 1:
-                display_unmem_l = display_unmem_l[:-1]
+            if len(to_unmem_str) > 1000:
+                display_unmem_l = to_unmem_str[:1000].split(',')[:-1]
+            else:
+                display_unmem_l = to_unmem_str.split(',')
+
             hidden_unmem_members = len(to_unmember) - len(display_unmem_l)
             
             # make message            
@@ -517,9 +521,11 @@ class DiscordClient:
                  for member in to_keep])
 
             # get members unchanged to display
-            display_keep_l = to_keep_str[:1000].split(',')
-            if len(display_keep_l) > 1:
-                display_keep_l = display_keep_l[:-1]
+            if len(to_keep_str) > 1000:
+                display_keep_l = to_keep_str[:1000].split(',')[:-1]
+            else:
+                display_keep_l = to_keep_str.split(',')
+
             hidden_keep_members = len(to_keep) - len(display_keep_l)
             
             # make message            
