@@ -60,8 +60,6 @@ class MemberProcessView(discord.ui.View):
                        style = discord.ButtonStyle.primary)
     async def button_get(self, interaction: discord.Interaction,
                          button: discord.ui.Button):
-        
-
 
         member_role = interaction.guild.get_role(678922012109963294)
         embed = MessageTemplate()
@@ -487,7 +485,7 @@ class DiscordClient:
             # make message
             to_mem_str_short = (
                 ','.join(display_mem_l)
-                + f'\n{hidden_member_members}')
+                + f'\n{max(0, hidden_member_members)}')
             if hidden_member_members <= 1:
                 to_mem_str_short += ' utilisateur masqué'
             else:
@@ -507,7 +505,7 @@ class DiscordClient:
             # make message            
             to_unmem_str_short = (
                 ','.join(display_unmem_l)
-                + f'\n{hidden_unmem_members}')
+                + f'\n{max(0, hidden_unmem_members)}')
             if hidden_unmem_members <= 1:
                 to_unmem_str_short += ' utilisateur masqué'
             else:
@@ -527,7 +525,7 @@ class DiscordClient:
             # make message            
             to_keep_str_short = (
                 ','.join(display_keep_l)
-                + f'\n{hidden_keep_members}')
+                + f'\n{max(0, hidden_keep_members)}')
             if hidden_keep_members <= 1:
                 to_keep_str_short += ' utilisateur masqué'
             else:
