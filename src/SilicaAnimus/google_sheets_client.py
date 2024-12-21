@@ -78,10 +78,14 @@ class GoogleSheetsClient:
             lowered_names = list(map(lambda s: s.lower(), values[row_index][:2]))
             if lowered_names == [last_name.lower(), first_name.lower()]:
                 member_info.in_spreadsheet = True
-                if len(values) >= 3:
-                    member_info.server_nickname = values[row_index][2]
-                if len(values) >= 4:
-                    member_info.discord_nickname = values[row_index][3]
+                # if len(values) >= 3:
+                #     member_info.server_nickname = values[row_index][2]
+                if len(values[row_index]) >= 3:
+                    member_info.discord_nickname = values[row_index][2]
+                if len(values[row_index]) >= 4:
+                    member_info.member_last_year = values[row_index][3] == 'Oui'
+                if len(values[row_index]) >= 5:
+                    member_info.member_current_year = values[row_index][4] == 'Oui'
 
                 return member_info
 
@@ -191,8 +195,8 @@ class GoogleSheetsClient:
                     member_info.last_name,
                     member_info.first_name,
                     member_info.discord_nickname,
-                    "Oui" if member_info.member_current_year else "",
                     "Oui" if member_info.member_last_year else "",
+                    "Oui" if member_info.member_current_year else "",
                 ]
             ]
         }
