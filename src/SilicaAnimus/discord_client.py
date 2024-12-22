@@ -573,18 +573,24 @@ class DiscordClient:
                         await interaction.channel.send(
                             f'On ajoute {user} à la liste des membres')
 
-                    for user in to_keep:
-                        await interaction.channel.send(
-                            f'On garde {user} comme membre')
                 
                 @discord.ui.button(label = 'Annuler',
                                    style = discord.ButtonStyle.danger,
                                    disabled = False,
                                    custom_id = 'cancel')
                 async def button_cancel(self, interaction, button):
-                    print(interaction)
-                
-           
+                    for item in self.children:
+                        item.disabled = True
+
+                    embed.description = 'COMMANDE ANNULÉE'
+                    embed.clear_fields()
+
+                    await interaction.response.edit_message(embed = embed,
+                                                            view = buttons)
+
+
+
+                    
             buttons = Buttons()
 
             await interaction.response.send_message(embed = embed,
