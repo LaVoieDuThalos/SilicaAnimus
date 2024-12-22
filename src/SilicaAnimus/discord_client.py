@@ -451,7 +451,7 @@ class DiscordClient:
                            le discord""")
         @logging_command(logger = self.logger)
         async def update_member_list(interaction: discord.Interaction):
-            role = interaction.guild.get_role(678922012109963294)
+            role = interaction.guild.get_role(1310285968393371770)
             member_list = await self.gsheet_client.get_members_by_discord_names(
                 [member.name for member in interaction.guild.members])
 
@@ -553,6 +553,10 @@ class DiscordClient:
                 inline = False)
 
             class Buttons(discord.ui.View):
+                def __init__(self, logger, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.logger = logger
+                
                 @discord.ui.button(label = 'Afficher les membres masqués',
                                    style = discord.ButtonStyle.primary,
                                    disabled = True,
@@ -565,13 +569,21 @@ class DiscordClient:
                                    disabled = False,
                                    custom_id = 'confirm')
                 async def button_confirm(self, interaction, button):
+                    await interaction.response.defer()
                     for user in to_unmember:
-                        await interaction.channel.send(
-                            f'On retire {user} de la liste des membres')
+                        user = interaction.guild.get_member_named(user)
+                        await user.remove_roles(role)                        
+                        self.logger.info(
+                            f'{user} is removed from the member list')
 
                     for user in to_member:
-                        await interaction.channel.send(
-                            f'On ajoute {user} à la liste des membres')
+                        user = interaction.guild.get_member_named(user)
+                        await user.add_roles(role)
+                        self.logger.info(f'{user} is added to the member list')
+
+                    embed.description = 'Liste des membres mise à jour'
+                    embed.clear_fields()
+                    await interaction.followup.send(embed = embed)
 
                 
                 @discord.ui.button(label = 'Annuler',
@@ -591,7 +603,8 @@ class DiscordClient:
 
 
                     
-            buttons = Buttons()
+            buttons = Buttons(logger = self.logger)
+
 
             await interaction.response.send_message(embed = embed,
                                                     view = buttons)
