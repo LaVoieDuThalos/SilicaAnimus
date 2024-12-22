@@ -5,11 +5,11 @@ from os import getenv
 import asyncio
 from typing import Union, Text
 from dotenv import load_dotenv
+from time import sleep
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-
 
 from helloasso_client import HelloAssoClient
 from google_sheets_client import GoogleSheetsClient, MemberInfo
@@ -392,6 +392,7 @@ class DiscordClient:
                             user_group: discord.Role):
 
             message = ''
+            await interaction.response.defer()
             for member in user_group.members:
                 try:
                     await member.add_roles(role_given)
@@ -400,6 +401,7 @@ class DiscordClient:
                         + f'Le role {role_given.mention} '
                         + f'est accordé à {member.mention}\n'
                         )
+                    self.logger.info(message)
                     
                 except Exception as e:
                     message += str(e)
@@ -407,13 +409,13 @@ class DiscordClient:
                         title = 'Une erreur est survenue...',
                         description = message
                         )
-                    await interaction.response.send_message(embed = embed)
+                    await interaction.followup.send(embed = embed)
                     raise
 
             embed = MessageTemplate(
                 title = 'Affectation de roles :',
                 description = message)
-            await interaction.response.send_message(embed = embed)
+            await interaction.followup.send(embed = embed)
 
 
         @app_commands.checks.has_role('Administrateurs')
@@ -560,10 +562,20 @@ class DiscordClient:
                 
                 @discord.ui.button(label = 'Confirmer',
                                    style = discord.ButtonStyle.success,
-                                   disabled = True,
+                                   disabled = False,
                                    custom_id = 'confirm')
                 async def button_confirm(self, interaction, button):
-                    pass
+                    for user in to_unmember:
+                        await interaction.channel.send(
+                            f'On retire {user} de la liste des membres')
+
+                    for user in to_member:
+                        await interaction.channel.send(
+                            f'On ajoute {user} à la liste des membres')
+
+                    for user in to_keep:
+                        await interaction.channel.send(
+                            f'On garde {user} comme membre')
                 
                 @discord.ui.button(label = 'Annuler',
                                    style = discord.ButtonStyle.danger,
