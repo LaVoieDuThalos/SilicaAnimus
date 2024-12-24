@@ -30,7 +30,8 @@ class GoogleSheetsClient:
         self.logger = logging.getLogger(__name__)
 
         self.google_service = googleapiclient.discovery.build(
-            "sheets", "v4", credentials=self.credentials
+            "sheets", "v4", credentials=self.credentials,
+            cache_discovery = False
         )
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
@@ -46,7 +47,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .get(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1:F1000",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1:F1000',
                 )
                 .execute()
             )
@@ -77,10 +78,14 @@ class GoogleSheetsClient:
             lowered_names = list(map(lambda s: s.lower(), values[row_index][:2]))
             if lowered_names == [last_name.lower(), first_name.lower()]:
                 member_info.in_spreadsheet = True
-                if len(values) >= 3:
-                    member_info.server_nickname = values[row_index][2]
-                if len(values) >= 4:
-                    member_info.discord_nickname = values[row_index][3]
+                # if len(values) >= 3:
+                #     member_info.server_nickname = values[row_index][2]
+                if len(values[row_index]) >= 3:
+                    member_info.discord_nickname = values[row_index][2]
+                if len(values[row_index]) >= 4:
+                    member_info.member_last_year = values[row_index][3] == 'Oui'
+                if len(values[row_index]) >= 5:
+                    member_info.member_current_year = values[row_index][4] == 'Oui'
 
                 return member_info
 
@@ -105,14 +110,20 @@ class GoogleSheetsClient:
         member_info = MemberInfo(discord_nickname=discord_name)
 
         for row_index in range(len(values)):
-            if len(values[row_index]) < 4:
+            if len(values[row_index]) < 3:
                 continue
 
-            if values[row_index][3].lower() == discord_name:
+            if values[row_index][2].lower() == discord_name:
                 member_info.in_spreadsheet = True
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 member_info.server_nickname = values[row_index][2]
+                if len(values[row_index]) > 3:
+                    member_info.member_last_year = (
+                        values[row_index][3] == 'Oui')
+                if len(values[row_index]) > 4:
+                    member_info.member_current_year = (
+                        values[row_index][4] == 'Oui')                    
 
                 return member_info
 
@@ -151,9 +162,11 @@ class GoogleSheetsClient:
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
                 if len(values[row_index]) < 4:
+                    members_list.append(member_info)
                     continue
                 member_info.member_last_year = values[row_index][3] == "Oui"
                 if len(values[row_index]) < 5:
+                    members_list.append(member_info)
                     continue
                 member_info.member_current_year = values[row_index][4] == "Oui"
 
@@ -182,8 +195,8 @@ class GoogleSheetsClient:
                     member_info.last_name,
                     member_info.first_name,
                     member_info.discord_nickname,
-                    "Oui" if member_info.member_current_year else "",
                     "Oui" if member_info.member_last_year else "",
+                    "Oui" if member_info.member_current_year else "",
                 ]
             ]
         }
@@ -203,7 +216,7 @@ class GoogleSheetsClient:
                     self.sheets.values()
                     .append(
                         spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
+                        range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
                         valueInputOption="USER_ENTERED",
                         body=body,
                     )
@@ -221,7 +234,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .update(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )
@@ -270,7 +283,7 @@ class GoogleSheetsClient:
                 member_sheet_row = names_list.index(name_tuple) + 1
                 update_data.append(
                     {
-                        "range": f"{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}",
+                        "range": f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
                         "values": [insert_values[name_tuple]],
                     }
                 )
@@ -296,7 +309,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .append(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv("GOOGLE_SHEET_ID")}!A1",
+                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )

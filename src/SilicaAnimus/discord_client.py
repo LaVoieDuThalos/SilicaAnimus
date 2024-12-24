@@ -1,178 +1,263 @@
 import itertools as itt
+import functools
 import logging
 from os import getenv
 import asyncio
+from typing import Union, Text
+from dotenv import load_dotenv
+from time import sleep
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
-from SilicaAnimus.helloasso_client import HelloAssoClient
-from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
+from helloasso_client import HelloAssoClient
+from google_sheets_client import GoogleSheetsClient, MemberInfo
+
+load_dotenv()
 
 
-def get_object_mentionned(mention, ctx):
-    if mention.startswith("<") and mention.endswith(">"):
-        if mention.startswith("<@!"):
-            mention = int(mention[3:-1])
-            obj = ctx.guild.get_member(mention)
-        elif mention.startswith("<@&"):
-            mention = int(mention[3:-1])
-            obj = ctx.guild.get_role(mention)
-        elif mention.startswith("<@"):
-            mention = int(mention[2:-1])
-            obj = ctx.guild.get_member(mention)
-
-        return obj
-    else:
-        raise ValueError("This is not a mention !")
-
-
-@commands.check
-def custom_pinners(ctx):
-    return False
-
-
-class AdminCog(commands.Cog):
-    """Commands used to administrate the Discord"""
-
-    def __init__(self, parent_client):
-        super().__init__()
-
-        self.parent_client = parent_client
-        self.logger = logging.getLogger(type(self).__name__)
-
-    @commands.command()
-    @commands.has_role(int(getenv("ADMIN_ROLE_ID")))
-    async def give_role(self, ctx, *args, **kwargs):
-        """This command give one or several roles to a user or to a group
-        of users
-
-        Syntax : !give_role [role1] [role2] ... to [user1] [user2] ... [roleA] [roleB]
-        ..."""
-        self.logger.info(f"user {ctx.author} invoked give_role command")
-
-        # parsing args
-        roles_stack = []
-        user_stack = []
-        try:
-            split_rank = args.index("to")
-        except ValueError:
-            await ctx.channel.send("Bad command usage. Type !help give_role")
-            raise
-
-        roles_stack = args[:split_rank]
-        user_stack = args[split_rank + 1:]
-
-        # Running command
-        for role, g_user in itt.product(roles_stack, user_stack):
-            self.logger.info(f"{role} à {g_user}")
-            men_role = get_object_mentionned(role, ctx)
-            men_guser = get_object_mentionned(g_user, ctx)
-            if not isinstance(men_role, discord.Role):
-                await ctx.channel.send("Bad command usage")
-                raise ValueError
-            if isinstance(men_guser, discord.Role):
-                for member in men_guser.members:
-                    await member.add_roles(men_role)
-            elif isinstance(men_guser, discord.Member):
-                await men_guser.add_roles(men_role)
-            else:
-                await ctx.channel.send("Bad command usage")
-                raise ValueError
-
-        await ctx.channel.send("Giving role...")
-
-    @commands.command()
-    @commands.check_any(commands.has_permissions(manage_messages=True), custom_pinners)
-    async def pin(self, ctx, *args, **kwargs):
-        """
-        Pins the given message, replied or last message in this channel
-
-        Usage : Reply to the message you want to pin with !pin
-        OR link messages you want to pin : !pin [link1] [link2] ...
-        OR pins the last message : !pin"""
-        self.logger.info("Running pin command")
-        if len(args) > 0:
+def logging_command(logger):
+    """ write logs when activating commands. Not working on some commands
+    for unknown reason"""
+    def Inner(command):
+        
+        @functools.wraps(command)
+        async def command_with_logs(interaction: discord.Interaction,
+                                    *args: Union[None, str,
+                                                 discord.Member,
+                                                 discord.User,
+                                                 discord.Role]):
+            log_message = (f'Command {command.__name__} called '
+                           + f'by {interaction.user.name}')
             for arg in args:
-                link = arg.split("/")
-                server_id = int(link[4])
-                channel_id = int(link[5])
-                message_id = int(link[6])
-                if ctx.guild.id == server_id and ctx.channel.id == channel_id:
-                    to_pin = await ctx.channel.fetch_message(message_id)
-                    await to_pin.pin()
-                    self.logger.info(f"{to_pin} pinned")
+                log_message += f'with argument {arg}'
+
+            logger.info(log_message)
+            await command(interaction,*args)
+            logger.info(f'Command {command.__name__} finished')
+
+        return command_with_logs
+    return Inner
+    
+
+class MessageTemplate(discord.Embed):
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.colour = discord.Colour.dark_red()
+        self.set_footer(icon_url = (
+            'https://voie-du-thalos.org/img/logo.png'),
+                        text = 'Application Discord pour La Voie du Thalos')
+
+class MemberProcessView(discord.ui.View):
+
+    def __init__(self, client, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client = client
+
+    @discord.ui.button(label = 'Demander le rôle de membre',
+                       style = discord.ButtonStyle.primary)
+    async def button_get(self, interaction: discord.Interaction,
+                         button: discord.ui.Button):
+
+        member_role = interaction.guild.get_role(678922012109963294)
+        embed = MessageTemplate()
+        ephemeral = False
+
+        member_info = (
+            await self.client.gsheet_client.get_member_by_discord_name(
+            interaction.user.name)
+        )
+
+        # if the member has the role already
+        if member_role in interaction.user.roles:
+            await interaction.response.defer()            
+            embed.description = (
+                f"Vous possédez déjà le rôle {member_role.mention}.")
+            await interaction.followup.send(embed = embed,
+                                            ephemeral = ephemeral)
+
+        # if the member is in the sheet
+        elif member_info.in_spreadsheet:
+            await interaction.response.defer()
+
+            # get information about this member, update member_info
+            if await self.client.helloasso_client.get_membership(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name):
+                member_info.member_current_year = True
+                await self.client.gsheet_client.add_member(member_info)
+
+
+            if member_info.member_current_year:
+                await interaction.user.add_roles(member_role)    
+
+                embed.description = (
+                    f"Rôle {member_role.mention} ajouté avec succès")
+
+                await interaction.followup.send(embed = embed,
+                                                ephemeral = ephemeral)
+                
+            # if the user is not member of the association this year
+            else:
+                embed.description = (
+                    f"Votre compte discord est associé au nom "
+                    + f"{member_info.last_name}, prénom "
+                    + f"{member_info.first_name} qui n'est actuellement pas "
+                    + "adhérent de l'association. S'il s'agit d'une erreur, "
+                    + "merci de contacter un administrateur")
+                await interaction.followup.send(embed = embed,
+                                                ephemeral = ephemeral)
+        # if the member is not in the sheet
+        else:
+            #send form
+            membership = MemberProcessModal()
+            await interaction.response.send_modal(membership)
+            await membership.wait()
+            
+            member_info.first_name = membership.first_name.value
+            member_info.last_name = membership.last_name.value
+
+            # if the user is member of association
+            if await self.client.helloasso_client.get_membership(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name):
+                member_info.member_current_year = True
+                identity_info = await self.client.gsheet_client.get_member_by_name(
+                    first_name = member_info.first_name,
+                    last_name = member_info.last_name)
+                # if there is already a discord name recorded
+                if len(identity_info.discord_nickname) > 0:
+                    embed.description = (f"Ces nom / prénom sont déjà associés "
+                    + "à un compte discord. Veuillez contacter un "
+                    + "administrateur pour résoudre ce problème")
+                # if there is no discord name recorded
                 else:
-                    await ctx.channel.send(
-                        "Please try to pin in the channel the message" + " comes from"
-                    )
-                    self.logger.info("bad pin resquest (wrong channel)")
-        elif ctx.message.reference is not None:
-            to_pin = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-            await to_pin.pin()
+                    member_info.member_last_year = identity_info.member_last_year
+                    await self.client.gsheet_client.add_member(member_info)
+                    await interaction.user.add_roles(member_role)
+                    embed.description = (f"Rôle {member_role.mention} ajouté "
+                    + "avec succès")
+                
+            # if the user is not member of association
+            else:
+                embed.description = (
+                    "Vous n'êtes actuellement pas référencé comme membre de "
+                    + "l'association. S'il s'agit d'une erreur veuillez "
+                    + "contacter un administrateur")
 
-        else:
-            # If nothing is given, pin the last message of the history
-            # (before the command call)
-            to_pin = [m async for m in ctx.history()][1]
-            await to_pin.pin()
+            await membership.interaction.followup.send(
+                embed = embed, ephemeral = ephemeral)
+
+    @discord.ui.button(label = 'Signaler un problème',
+                       style = discord.ButtonStyle.danger)
+    async def button_report(self, interaction: discord.Interaction,
+                            button: discord.ui.Button):
+        await interaction.response.send_message('Contactez un administrateur',
+                                                ephemeral = True)
+        
+class MemberProcessModal(discord.ui.Modal,
+                         title = 'Devenir membre sur le discord'):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.member_role = 'Membres Thalos'
+        
+        self.first_name = discord.ui.TextInput(label = 'Prénom')
+        self.last_name = discord.ui.TextInput(label = 'Nom') 
+        self.add_item(self.first_name)
+        self.add_item(self.last_name)
 
 
-class BureauCog(commands.Cog):
-    """Commands used to get information the Bureau"""
 
-    def __init__(self, parent_client):
-        super().__init__()
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = MessageTemplate(description = """Données envoyées""")
+        self.interaction = interaction
+        await interaction.response.defer()
+        
+        
 
-        self.parent_client = parent_client
-        self.logger = logging.getLogger(type(self).__name__)
 
-    @commands.command()
-    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
-    async def nom_membre(self, ctx, *arg, **kwargs):
-        """This command gets the name of the person from the google sheet"""
 
-        self.logger.info("Running nom_membre command")
-        tokens = ctx.message.content.split(" ")
-        if len(tokens) != 2:
-            self.logger.warning("Wrong check member command")
-            await ctx.channel.send(
-                "Invoke the command with !nom_membre *pseudo du membre*"
-            )
-            return
+class CheckModal(discord.ui.Modal, title = 'Informations'):
+    prenom = discord.ui.TextInput(label = 'Prénom',
+                                  placeholder = 'Paul')
+    nom = discord.ui.TextInput(label = 'Nom',
+                               placeholder = 'Bismuth')
 
-        member_info: MemberInfo = (
-            await self.parent_client.gsheet_client.get_member_by_discord_name(tokens[1])
+
+
+    async def on_submit(self, interaction: discord.Interaction):
+        nom = self.nom
+        prenom = self.prenom
+        ha_client = interaction.client.parent_client.helloasso_client
+        is_member = await ha_client.get_membership(
+            first_name = prenom.value,
+            last_name = nom.value
         )
 
-        if member_info.in_spreadsheet:
-            await ctx.channel.send(
-                f"{tokens[1]} est {member_info.first_name} {member_info.last_name}"
-            )
-        else:
-            await ctx.channel.send(f"{tokens[1]} n'est pas dans la google sheet")
-
-    @commands.command()
-    @commands.has_any_role(int(getenv("ADMIN_ROLE_ID")), int(getenv("BUREAU_ROLE_ID")))
-    async def check_member(self, ctx, *arg, **kwargs):
-        """This command checks if the person is a member on HelloAsso"""
-        self.logger.info("Running check_member command")
-        tokens = ctx.message.content.split(" ")
-        if len(tokens) != 3:
-            self.logger.warning("Wrong check member command")
-            await ctx.channel.send(
-                "Invoke the command with !check_member *first_name* *last_name*"
-            )
-            return
-
-        first_name, last_name = tokens[1], tokens[2]
-        is_member = await self.parent_client.helloasso_client.get_membership(
-            first_name=first_name, last_name=last_name
-        )
         if is_member:
-            await ctx.channel.send(f"{first_name} {last_name} is a member")
+            return_message = f"{prenom.value} {nom.value} est adhérent"
         else:
-            await ctx.channel.send(f"{first_name} {last_name} is not a member")
+            return_message = f"{prenom.value} {nom.value} n'est pas adhérent"
+        embed = MessageTemplate(
+            title = 'Vérification du membre :',
+            description = return_message)
+        await interaction.response.send_message(embed = embed, 
+                                                ephemeral = True)        
+
+class MyView(discord.ui.View):
+    @discord.ui.button(label = 'Je cherche un adversaire',
+                       style = discord.ButtonStyle.primary)
+    async def button_search(self, interaction, button):
+        
+        embed = interaction.message.embeds[0]
+
+        for i, field in enumerate(embed.fields):
+            if field.name == 'Joueurs en attente':
+                my_field = field
+                field_ID = i
+
+        new_user = interaction.user.mention
+        content = my_field.value
+        if new_user not in my_field.value:
+            content += f'\n{new_user}'
+
+        embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                           value = content,
+                           inline = False)
+        await interaction.response.edit_message(embed = embed)
+                
+    # @discord.ui.button(label = 'Rejoindre une partie',
+    #                    style = discord.ButtonStyle.success)
+    # async def button_join(self, interaction, button):
+    #     content = interaction.message.content
+    #     print(interaction.message.embeds[0])
+    #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
+    #     await interaction.message.edit(content = edit)
+
+                
+    @discord.ui.button(label = 'Se retirer',
+                       style = discord.ButtonStyle.danger)
+    async def button_exit(self, interaction, button):
+        embed = interaction.message.embeds[0]
+        for i, field in enumerate(embed.fields):
+            if field.name == "Joueurs en attente":
+                my_field = field
+                field_ID = i
+
+        user = interaction.user.mention
+        content = my_field.value
+        list_val = my_field.value.split('\n')
+        for val in list_val:
+            if user in val:
+                list_val.remove(val)
+
+        embed.set_field_at(field_ID, name = 'Joueurs en attente',
+                           value = '\n'.join(list_val),
+                           inline = False)
+
+        await interaction.response.edit_message(embed = embed)
 
 
 class DiscordClient:
@@ -194,7 +279,11 @@ class DiscordClient:
         self.helloasso_client: HelloAssoClient = helloasso_client
         self.gsheet_client: GoogleSheetsClient = gsheet_client
 
-        self.client = commands.Bot(command_prefix="!", intents=self.intents)
+        self.client = commands.Bot(command_prefix = '!', intents = self.intents)
+        self.client.parent_client = self
+        self.tree = self.client.tree
+
+        
         self.logger = logging.getLogger(__name__)
 
         self.token = token
@@ -205,32 +294,378 @@ class DiscordClient:
         self.run = True
 
         # Commands
-        @self.client.command()
-        async def ping(ctx):
-            await ctx.channel.send("pong")
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Envoie un signal à l'application et affiche le
+                           temps de latence
+                           """)
+        @logging_command(self.logger)
+        async def ping(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Pong !',
+                description = (
+                    f'Bot ping is {round(1000*self.client.latency)} ms'),
+            )
+            
+            await interaction.response.send_message(embed = embed)
+            
+            
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           L'application répète le message envoyé
+                           """)
+        @app_commands.describe(text = 'Texte à répéter')
+        @app_commands.rename(text = 'texte')
+        async def echo(interaction: discord.Interaction, text: str):
+            embed = MessageTemplate(
+                description = text,
+                )
+            await interaction.response.send_message(embed = embed)
 
-        @self.client.command()
-        async def echo(ctx, *args):
-            await ctx.channel.send(" ".join(args))
+            
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Fais la liste des rôles possédés par l'utilisateur
+                           """)
+        @logging_command(self.logger)        
+        async def my_roles(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Your roles are : ', 
+                description = ''.join(
+                    [role.mention + '\n' for role in interaction.user.roles[::-1]]
+                ),
+                )
+            await interaction.response.send_message(embed = embed)
 
-        @self.client.command()
-        async def my_roles(ctx):
-            await ctx.channel.send(str(ctx.author.roles))
+            
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Affiche les utilisateurs ayant le rôle fourni en
+                           paramètre
+                           """)
+        @app_commands.rename(role = 'rôle')
+        @app_commands.describe(role =  'Role dont il faut lister les membres')
+        async def whois(interaction: discord.Interaction,
+                        role: discord.Role):
 
+            embed = MessageTemplate(
+                description = (f'Les membres ayant le role {role.mention}'
+                               + 'sont :'), 
+                )
+            max_fields = 25
+            number_by_field = len(role.members) // max_fields + 1
+
+            for i in range(min(max_fields, len(role.members))):
+                embed.add_field(name = '', value = ''.join(
+                    [member.mention + '\n'
+                     for member in role.members[i::max_fields]]))
+            await interaction.response.send_message(embed = embed)
+        
+
+            
+        @self.tree.context_menu(name = 'Epingler',
+                                guild = self.thalos_guild)
+        @app_commands.checks.has_role('Administrateurs')
+        async def pin(interaction: discord.Interaction,
+                      message: discord.Message):
+            try:
+                await message.pin()
+                embed = MessageTemplate(description = 'Message épinglé !')
+                await interaction.response.send_message(embed = embed,
+                                                        ephemeral = True)
+            except discord.errors.HTTPException as e:
+                await interaction.response.send_message(e, ephemeral = True)
+
+
+                
+        @app_commands.checks.has_role('Administrateurs')
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Donne un rôle à tous les membres ayant le rôle
+                           fourni en paramètre
+                           """)
+        @app_commands.describe(role_given = 'Rôle à donner',
+                               user_group = """Groupe d'utilisateurs recevant
+                               le nouveau rôle""")
+        async def give_role(interaction: discord.Interaction,
+                            role_given: discord.Role,
+                            user_group: discord.Role):
+
+            message = ''
+            await interaction.response.defer()
+            for member in user_group.members:
+                try:
+                    await member.add_roles(role_given)
+                    message = (
+                        message
+                        + f'Le role {role_given.mention} '
+                        + f'est accordé à {member.mention}\n'
+                        )
+                    self.logger.info(message)
+                    
+                except Exception as e:
+                    message += str(e)
+                    embed = MessageTemplate(
+                        title = 'Une erreur est survenue...',
+                        description = message
+                        )
+                    await interaction.followup.send(embed = embed)
+                    raise
+
+            embed = MessageTemplate(
+                title = 'Affectation de roles :',
+                description = message)
+            await interaction.followup.send(embed = embed)
+
+
+        @app_commands.checks.has_role('Administrateurs')
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Vérifie si une personne est adhérente de
+                           l'association """)
+        @logging_command(logger = self.logger)
+        async def check_member(interaction: discord.Interaction):
+            data = {'prenom' : '',
+                    'nom' : ''}
+            modal = CheckModal()
+            await interaction.response.send_modal(modal)
+            await modal.wait()
+
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """Ajoute le membre au groupe des
+                           adhérents sur le discord""")
+        @logging_command(logger = self.logger)
+        async def get_membership(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Obtenir votre role de membre sur le discord',
+                description = '')
+            buttons = MemberProcessView(timeout = None,
+                                        client = self.client.parent_client)
+            await interaction.response.send_message(embed = embed,
+                                                    view = buttons)
+
+            
+        @self.tree.command(guild = self.thalos_guild,
+                           description = """
+                           Lance la procédure de mise à jour des adhérents sur
+                           le discord""")
+        @logging_command(logger = self.logger)
+        async def update_member_list(interaction: discord.Interaction):
+            role = interaction.guild.get_role(1310285968393371770)
+            member_list = await self.gsheet_client.get_members_by_discord_names(
+                [member.name for member in interaction.guild.members])
+
+            to_member = []
+            to_unmember = []
+            to_keep = []
+            unaffected = []
+            for member in member_list:
+                member_obj = interaction.guild.get_member_named(member.discord_nickname)
+                if member.member_current_year and role in member_obj.roles:
+                    to_keep.append(member.discord_nickname)
+                elif member.member_current_year:
+                    to_member.append(member.discord_nickname)
+                elif role in member_obj.roles:
+                    to_unmember.append(member.discord_nickname)
+                else:
+                    unaffected.append(member.discord_nickname)
+
+            embed = MessageTemplate(
+                title = """ Mise à jour des adhérents sur le Discord""")
+
+            # get the user list to member
+            to_mem_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_member])
+
+            # get members to display
+            if len(to_mem_str) > 1000:
+                display_mem_l = to_mem_str[:1000].split(',')[:-1]
+            else:
+                display_mem_l = to_mem_str.split(',')
+
+            hidden_member_members = len(to_member) - len(display_mem_l)
+
+            # make message
+            to_mem_str_short = (
+                ','.join(display_mem_l)
+                + f'\n{max(0, hidden_member_members)}')
+            if hidden_member_members <= 1:
+                to_mem_str_short += ' utilisateur masqué'
+            else:
+                to_mem_str_short += ' utilisateurs masqués'
+            
+            # get the user list to unmember    
+            to_unmem_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_unmember])
+
+            # get unmembers to display
+            if len(to_unmem_str) > 1000:
+                display_unmem_l = to_unmem_str[:1000].split(',')[:-1]
+            else:
+                display_unmem_l = to_unmem_str.split(',')
+
+            hidden_unmem_members = len(to_unmember) - len(display_unmem_l)
+            
+            # make message            
+            to_unmem_str_short = (
+                ','.join(display_unmem_l)
+                + f'\n{max(0, hidden_unmem_members)}')
+            if hidden_unmem_members <= 1:
+                to_unmem_str_short += ' utilisateur masqué'
+            else:
+                to_unmem_str_short += ' utilisateurs masqués'                
+            
+            # get members unchanged     
+            to_keep_str = ', '.join(
+                [interaction.guild.get_member_named(member).mention
+                 for member in to_keep])
+
+            # get members unchanged to display
+            if len(to_keep_str) > 1000:
+                display_keep_l = to_keep_str[:1000].split(',')[:-1]
+            else:
+                display_keep_l = to_keep_str.split(',')
+
+            hidden_keep_members = len(to_keep) - len(display_keep_l)
+            
+            # make message            
+            to_keep_str_short = (
+                ','.join(display_keep_l)
+                + f'\n{max(0, hidden_keep_members)}')
+            if hidden_keep_members <= 1:
+                to_keep_str_short += ' utilisateur masqué'
+            else:
+                to_keep_str_short += ' utilisateurs masqués'
+                
+            embed.add_field(
+                name = 'Ces utilisateurs gagneront le role membre :',
+                value = to_mem_str_short,
+                inline = False)
+            embed.add_field(
+                name = 'Ces utilisateurs conserveront leur role membre :',
+                value = to_keep_str_short,
+                inline = False)
+            embed.add_field(
+                name = 'Ces utilisateurs perdront leur role membre :',
+                value = to_unmem_str_short,
+                inline = False)
+
+            class Buttons(discord.ui.View):
+                def __init__(self, logger, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.logger = logger
+                
+                @discord.ui.button(label = 'Afficher les membres masqués',
+                                   style = discord.ButtonStyle.primary,
+                                   disabled = True,
+                                   custom_id = 'display')
+                async def button_display(self, interaction, button):
+                    pass
+                
+                @discord.ui.button(label = 'Confirmer',
+                                   style = discord.ButtonStyle.success,
+                                   disabled = False,
+                                   custom_id = 'confirm')
+                async def button_confirm(self, interaction, button):
+                    await interaction.response.defer()
+                    for user in to_unmember:
+                        user = interaction.guild.get_member_named(user)
+                        await user.remove_roles(role)                        
+                        self.logger.info(
+                            f'{user} is removed from the member list')
+
+                    for user in to_member:
+                        user = interaction.guild.get_member_named(user)
+                        await user.add_roles(role)
+                        self.logger.info(f'{user} is added to the member list')
+
+                    embed.description = 'Liste des membres mise à jour'
+                    embed.clear_fields()
+                    await interaction.followup.send(embed = embed)
+
+                
+                @discord.ui.button(label = 'Annuler',
+                                   style = discord.ButtonStyle.danger,
+                                   disabled = False,
+                                   custom_id = 'cancel')
+                async def button_cancel(self, interaction, button):
+                    for item in self.children:
+                        item.disabled = True
+
+                    embed.description = 'COMMANDE ANNULÉE'
+                    embed.clear_fields()
+
+                    await interaction.response.edit_message(embed = embed,
+                                                            view = buttons)
+
+
+
+                    
+            buttons = Buttons(logger = self.logger)
+
+
+            await interaction.response.send_message(embed = embed,
+                                                    view = buttons)
+
+        
+        @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
+        @self.tree.context_menu(name = 'Informations utilisateur',
+                                guild = self.thalos_guild)
+        async def info(interaction: discord.Interaction,
+                       member: discord.Member):
+            self.logger.info(f'context info called by {interaction.user.name}')
+
+            first_name = 'INCONNU'
+            last_name = 'INCONNU'
+
+            member_info: MemberInfo = (
+                await self.gsheet_client.get_member_by_discord_name(
+                    member.name)
+                )
+
+            if member_info.in_spreadsheet:
+                first_name = member_info.first_name
+                last_name = member_info.last_name
+            
+            embed = MessageTemplate(title = "Informations sur l'utilisateur :")
+            embed.add_field(name = 'Pseudo discord', value = member.mention)
+            embed.add_field(name = 'Nom', value = last_name)
+            embed.add_field(name = 'Prénom', value = first_name)
+                                    
+            await interaction.response.send_message(embed = embed, ephemeral = True)
+
+                
+                
+        @self.tree.command(guild = self.thalos_guild)
+        @logging_command(logger = self.logger)
+        async def make_table(interaction: discord.Interaction):
+            embed = MessageTemplate(
+                title = 'Organisation du 14/12/24')
+            embed.add_field(name = 'Parties prévues (1v1)',
+                            value = '',
+                            inline = False)
+            embed.add_field(name = 'Joueurs en attente',
+                            value = '',
+                            inline = False)
+            await interaction.response.send_message(embed = embed,
+                                                    view = MyView())
+        
+                            
+            
         # Events
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+            for command in await self.client.tree.sync(
+                    guild = self.thalos_guild):
+                self.logger.info(f'Command "{command.name}" synced to the app')
+            self.logger.info("Commands added")
 
-            await self.client.add_cog(AdminCog(self))
-            self.logger.info("Admin commands added")
-
-            await self.client.add_cog(BureauCog(self))
-            self.logger.info("Bureau commands added")
-
+            
         @self.client.event
         async def on_message(message) -> None:
-            await self.client.process_commands(message)
             self.logger.debug(
                 f"message {message.content} received from {message.author}"
             )
