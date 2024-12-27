@@ -238,7 +238,7 @@ class TableEmbed(discord.Embed):
         self.title = true_title + f' ({len(self.tables)}/{self.max_table})'
         name = f'Table {len(self.tables)}'
         if len(self.tables) > self.max_table:
-            name += '(en attente)'
+            name += ' (en attente)'
         self.add_field(
             name = name,
             value = players)
@@ -256,11 +256,10 @@ class TableEmbed(discord.Embed):
             table.add_table(field.value)
         return table
 
-class ActivityButton(discord.ui.Button):
-    def __init__(self, activity, embed_name, *args, **kwargs):
-        super().__init__(label = activity, style = discord.ButtonStyle.success)
+class ChoosePlayer(discord.ui.UserSelect):
+    def __init__(self, embed_name, *args, **kwargs):
+        super().__init__(max_values = 4, min_values = 2)
         self.embed_name = embed_name
-            
 
     async def callback(self, interaction):
         embeds = interaction.message.embeds
@@ -268,10 +267,35 @@ class ActivityButton(discord.ui.Button):
 
             if embed.title.startswith(self.embed_name):
                 embed = TableEmbed.make_table_embed(embed)                
-                embed.add_table(players = 'Endya vs Annabel')
+                embed.add_table(players = ' '.join(
+                    [player.mention for player in self.values]))
                 embeds[i] = embed
+
+        self.view.remove_item(self)
                 
-        await interaction.response.edit_message(embeds = embeds)
+        await interaction.response.edit_message(view = self.view,
+                                                embeds = embeds)
+        
+
+class ActivityButton(discord.ui.Button):
+    def __init__(self, activity, embed_name, *args, **kwargs):
+        super().__init__(label = activity, style = discord.ButtonStyle.success)
+        self.embed_name = embed_name
+            
+
+    async def callback(self, interaction):
+
+        self.view.add_item(ChoosePlayer(self.embed_name))
+        await interaction.response.edit_message(view = self.view)
+
+        # for i, embed in enumerate(embeds):
+
+        #     if embed.title.startswith(self.embed_name):
+        #         embed = TableEmbed.make_table_embed(embed)                
+        #         embed.add_table(players = 'Endya vs Annabel')
+        #         embeds[i] = embed
+                
+        # await interaction.response.edit_message(embeds = embeds)
 
         
 class MakeTableView(discord.ui.View):
