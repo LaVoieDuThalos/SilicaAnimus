@@ -451,7 +451,7 @@ class DiscordClient:
                            le discord""")
         @logging_command(logger = self.logger)
         async def update_member_list(interaction: discord.Interaction):
-            role = interaction.guild.get_role(1310285968393371770)
+            role = interaction.guild.get_role(678922012109963294)
             member_list = await self.gsheet_client.get_members_by_discord_names(
                 [member.name for member in interaction.guild.members])
 
