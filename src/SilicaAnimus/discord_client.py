@@ -225,24 +225,30 @@ class MakeTableForm(discord.ui.Modal,
 
 class TableEmbed(discord.Embed):
     def __init__(self, title, max_table, *args, **kwargs):
-        title += f' ({max_table} maximum)'
+        self.max_table = max_table
+        self.tables = []
+        title += f' ({len(self.tables)}/{max_table})'
         super().__init__(title = title, *args, **kwargs)
         self.max_table = max_table
         self.tables = []
 
     def add_table(self, players):
         self.tables.append(players)
+        true_title = self.title.split(' (')[0]
+        self.title = true_title + f' ({len(self.tables)}/{self.max_table})'
         name = f'Table {len(self.tables)}'
         if len(self.tables) > self.max_table:
             name += '(en attente)'
         self.add_field(
             name = name,
             value = players)
+
+        
     @staticmethod
     def make_table_embed(embed):
         true_title = embed.title.split(' (')[0]
         tail = embed.title.split(' (')[1]
-        max_table = int(tail.split(' ')[0])
+        max_table = int(tail.split('/')[1][:-1])
         table = TableEmbed(title = true_title,
                            description = embed.description,
                            max_table = max_table)
