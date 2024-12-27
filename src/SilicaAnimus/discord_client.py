@@ -16,7 +16,6 @@ from google_sheets_client import GoogleSheetsClient, MemberInfo
 
 load_dotenv()
 
-
 def logging_command(logger):
     """ write logs when activating commands. Not working on some commands
     for unknown reason"""
@@ -39,7 +38,7 @@ def logging_command(logger):
 
         return command_with_logs
     return Inner
-    
+
 
 class MessageTemplate(discord.Embed):
     def __init__(self, *args, **kwargs):
@@ -206,58 +205,103 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
         await interaction.response.send_message(embed = embed, 
                                                 ephemeral = True)        
 
-class MyView(discord.ui.View):
+class MakeTableForm(discord.ui.Modal,
+                    title = 'Informations Complémentaires'):
+    description = discord.ui.TextInput(label = 'Description')
+
+    async def on_submit(self, interaction: discord.Interaction):
+
+
+        for i, embed in enumerate(interaction.message.embeds):
+            if embed.title == 'Joueurs en attente' and embed.description is None:
+                embed.description =  f'{interaction.user.mention} {self.description}'
+            elif (embed.title == 'Joueurs en attente'
+                  and not interaction.user.mention in embed.description):
+                embed.description += f'\n{interaction.user.mention} {self.description}'
+            interaction.message.embeds[i] = embed
+                
+
+        await interaction.response.edit_message(embeds = interaction.message.embeds)
+
+class TableEmbed(discord.Embed):
+    def __init__(self, title, max_table, *args, **kwargs):
+        title += f' ({max_table} maximum)'
+        super().__init__(title = title, *args, **kwargs)
+        self.max_table = max_table
+        self.tables = []
+
+    def add_table(self, players):
+        self.tables.append(players)
+        name = f'Table {len(self.tables)}'
+        if len(self.tables) > self.max_table:
+            name += '(en attente)'
+        self.add_field(
+            name = name,
+            value = players)
+    @staticmethod
+    def make_table_embed(embed):
+        true_title = embed.title.split(' (')[0]
+        tail = embed.title.split(' (')[1]
+        max_table = int(tail.split(' ')[0])
+        table = TableEmbed(title = true_title,
+                           description = embed.description,
+                           max_table = max_table)
+        for field in embed.fields:
+            table.add_table(field.value)
+        return table
+
+class ActivityButton(discord.ui.Button):
+    def __init__(self, activity, embed_name, *args, **kwargs):
+        super().__init__(label = activity, style = discord.ButtonStyle.success)
+        self.embed_name = embed_name
+            
+
+    async def callback(self, interaction):
+        embeds = interaction.message.embeds
+        for i, embed in enumerate(embeds):
+
+            if embed.title.startswith(self.embed_name):
+                embed = TableEmbed.make_table_embed(embed)                
+                embed.add_table(players = 'Endya vs Annabel')
+                embeds[i] = embed
+                
+        await interaction.response.edit_message(embeds = embeds)
+
+        
+class MakeTableView(discord.ui.View):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_item(ActivityButton(activity = 'W40k',
+                                     embed_name = 'Tables 40k'))
+        self.add_item(ActivityButton(activity = 'AoS',
+                                     embed_name = 'Tables AoS'))
+        self.add_item(ActivityButton(activity = 'BB',
+                                     embed_name = 'Tables Blood Bowl'))
+        
+
     @discord.ui.button(label = 'Je cherche un adversaire',
                        style = discord.ButtonStyle.primary)
     async def button_search(self, interaction, button):
-        
-        embed = interaction.message.embeds[0]
+        infos = MakeTableForm()
+        await interaction.response.send_modal(infos)
+        await infos.wait()
 
-        for i, field in enumerate(embed.fields):
-            if field.name == 'Joueurs en attente':
-                my_field = field
-                field_ID = i
-
-        new_user = interaction.user.mention
-        content = my_field.value
-        if new_user not in my_field.value:
-            content += f'\n{new_user}'
-
-        embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                           value = content,
-                           inline = False)
-        await interaction.response.edit_message(embed = embed)
-                
-    # @discord.ui.button(label = 'Rejoindre une partie',
-    #                    style = discord.ButtonStyle.success)
-    # async def button_join(self, interaction, button):
-    #     content = interaction.message.content
-    #     print(interaction.message.embeds[0])
-    #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
-    #     await interaction.message.edit(content = edit)
-
-                
     @discord.ui.button(label = 'Se retirer',
                        style = discord.ButtonStyle.danger)
     async def button_exit(self, interaction, button):
-        embed = interaction.message.embeds[0]
-        for i, field in enumerate(embed.fields):
-            if field.name == "Joueurs en attente":
-                my_field = field
-                field_ID = i
+        embeds = interaction.message.embeds
+        embed = embeds[-1] # TODO : better check
+        text = embed.description.split('\n')
 
-        user = interaction.user.mention
-        content = my_field.value
-        list_val = my_field.value.split('\n')
-        for val in list_val:
-            if user in val:
-                list_val.remove(val)
+        for line in text[:]:
+            if interaction.user.mention in line:
+                text.remove(line)
 
-        embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                           value = '\n'.join(list_val),
-                           inline = False)
+        embed.description = '\n'.join(text)
 
-        await interaction.response.edit_message(embed = embed)
+        await interaction.response.edit_message(embeds = embeds)
+
 
 
 class DiscordClient:
@@ -599,12 +643,8 @@ class DiscordClient:
 
                     await interaction.response.edit_message(embed = embed,
                                                             view = buttons)
-
-
-
                     
             buttons = Buttons(logger = self.logger)
-
 
             await interaction.response.send_message(embed = embed,
                                                     view = buttons)
@@ -641,18 +681,46 @@ class DiscordClient:
         @self.tree.command(guild = self.thalos_guild)
         @logging_command(logger = self.logger)
         async def make_table(interaction: discord.Interaction):
+            embeds = []
             embed = MessageTemplate(
                 title = 'Organisation du 14/12/24')
-            embed.add_field(name = 'Parties prévues (1v1)',
+            embed.add_field(name = 'Tables disponibles',
+                            value = '17 tables (8 ilôts + 1 table)',
+                            inline = False)            
+            embed.add_field(name = 'Parties prévues 40k',
                             value = '',
                             inline = False)
+            embed.add_field(name = 'Parties prévues AoS',
+                            value = '',
+                            inline = False)
+            embed.add_field(name = 'Parties prévues Bloodbowl',
+                            value = '',
+                            inline = False)            
             embed.add_field(name = 'Joueurs en attente',
                             value = '',
                             inline = False)
-            await interaction.response.send_message(embed = embed,
-                                                    view = MyView())
+            embed = TableEmbed(
+                title = 'Tables 40k',
+                description = '',
+                max_table = 5)
+            embeds.append(embed)
+            embed = TableEmbed(
+                title = 'Tables AoS',
+                description = '',
+                max_table = 3)
+            embeds.append(embed)
+            embed = TableEmbed(
+                title = 'Tables Blood Bowl',
+                description = '',
+                max_table = 1)
+            embeds.append(embed)            
+            embed = discord.Embed(
+                title = 'Joueurs en attente',
+                description = '')
+            embeds.append(embed)
+            await interaction.response.send_message(
+                embeds = embeds, view = MakeTableView(timeout = None))
         
-                            
             
         # Events
         @self.client.event
