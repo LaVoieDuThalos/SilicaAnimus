@@ -31,7 +31,7 @@ class GoogleSheetsClient:
 
         self.google_service = googleapiclient.discovery.build(
             "sheets", "v4", credentials=self.credentials,
-            cache_discovery = False
+            cache_discovery=False
         )
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
@@ -119,7 +119,7 @@ class GoogleSheetsClient:
                         values[row_index][3] == 'Oui')
                 if len(values[row_index]) > 4:
                     member_info.member_current_year = (
-                        values[row_index][4] == 'Oui')                    
+                        values[row_index][4] == 'Oui')
 
                 return member_info
 
@@ -262,8 +262,8 @@ class GoogleSheetsClient:
                 member_info.last_name,
                 member_info.first_name,
                 member_info.discord_nickname,
-                "Oui" if member_info.member_current_year else "",
                 "Oui" if member_info.member_last_year else "",
+                "Oui" if member_info.member_current_year else "",
             ]
             for member_info in members_info
         }
