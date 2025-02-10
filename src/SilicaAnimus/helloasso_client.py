@@ -7,6 +7,10 @@ import asyncio
 from typing import List, Tuple, Union
 
 
+def normalize_name(name: str) -> str:
+    return name.strip("\"\' ").lower()
+
+
 class HelloAssoClient:
     def __init__(self, client_id: str, client_secret: str):
         """_summary_
@@ -187,8 +191,8 @@ class HelloAssoClient:
 
                     user = item["user"]
                     if (
-                        first_name.lower() == user["firstName"].lower()
-                        and last_name.lower() == user["lastName"].lower()
+                        normalize_name(first_name) == normalize_name(user["firstName"])
+                        and normalize_name(last_name) == normalize_name(user["lastName"])
                     ):
                         self.logger.info(f"{first_name} {last_name} is a member")
                         return True
@@ -209,7 +213,7 @@ class HelloAssoClient:
              set[Tuple[str, str]]: List of first name, last name who are members
         """
 
-        lowered_name_list = list(map(lambda t: (t[0].lower(), t[1].lower()), names))
+        normalize_names_list = list(map(lambda t: (normalize_name(t[0]), normalize_name(t[1])), names))
 
         if self.access_token is None:
             self.logger.warning("No token for get_membership request")
@@ -234,9 +238,9 @@ class HelloAssoClient:
 
                         user = item["user"]
                         if (
-                            user["firstName"].lower(),
-                            user["lastName"].lower(),
-                        ) in lowered_name_list:
+                            normalize_name(user["firstName"]),
+                            normalize_name(user["lastName"]),
+                        ) in normalize_names_list:
                             return_set.add((user["firstName"], user["lastName"]))
 
             if resp_data["pagination"]["totalCount"] == 0:

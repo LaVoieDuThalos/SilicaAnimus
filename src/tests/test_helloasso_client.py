@@ -39,13 +39,15 @@ async def test_helloasso_membership_check() -> bool:
         await asyncio.sleep(1)
 
     result = await client.get_membership("Lucas", "MARTI")
-    print(result)
     if not result:
         return False
 
-    print(result)
-    result = await client.get_membership("Lucas", "MARTI")
-    if await client.get_membership("Luas", "MARTI"):
+    result = await client.get_membership("Luas", "MARTI")
+    if result:
+        return False
+
+    result = await client.get_membership("\"Lucas\" ", "\"MARTI\" ")
+    if not result:
         return False
 
     await client.close()
@@ -62,7 +64,8 @@ async def test_helloasso_memberships_check() -> bool:
     future = asyncio.create_task(client.start())
     while not client.is_logged:
         await asyncio.sleep(1)
-    result = await client.get_memberships([("Lucas", "MARTI"), ("Luas", "MARTI")])
+    result = await client.get_memberships([("Lucas", "MARTI"), ("Luas", "MARTI"), ("\"Lucas\" ", "\"MARTI\" ")])
+
     print(result)
     await client.close()
     await future
