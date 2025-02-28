@@ -63,7 +63,7 @@ class MemberProcessView(discord.ui.View):
 
         member_role = interaction.guild.get_role(678922012109963294)
         embed = MessageTemplate()
-        ephemeral = False
+        ephemeral = True
 
         member_info = (
             await self.client.gsheet_client.get_member_by_discord_name(
