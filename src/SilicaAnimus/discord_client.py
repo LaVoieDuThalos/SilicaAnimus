@@ -438,7 +438,7 @@ class DiscordClient:
                            description = """Ajoute le membre au groupe des
                            adhérents sur le discord""")
         @logging_command(logger = self.logger)
-        async def get_membership(interaction: discord.Interaction):
+        async def make_membercheck(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Obtenir votre role de membre sur le discord',
                 description = '')
