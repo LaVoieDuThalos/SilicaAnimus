@@ -329,14 +329,26 @@ class DiscordClient:
                            Fais la liste des rôles possédés par l'utilisateur
                            """)
         @logging_command(self.logger)        
-        async def my_roles(interaction: discord.Interaction):
+        async def my_roles(interaction: discord.Interaction,
+                           text: str = 'hide'):
             embed = MessageTemplate(
-                title = 'Your roles are : ', 
+                title = 'Tu possèdes les rôles suivants : ', 
                 description = ''.join(
                     [role.mention + '\n' for role in interaction.user.roles[::-1]]
                 ),
                 )
-            await interaction.response.send_message(embed = embed)
+            if text == 'hide':
+                await interaction.response.send_message(
+                    embed = embed, ephemeral = True)
+            elif text == 'show':
+                await interaction.response.send_message(
+                    embed = embed)
+            else:
+                embed = MessageTemplate(
+                    title = "Mauvais argument",
+                    description = (f"L'argment fourni ({text}) "
+                                   + "est incorrect"))
+                await interaction.response.send_message(embed = embed)
 
             
         @self.tree.command(guild = self.thalos_guild,
