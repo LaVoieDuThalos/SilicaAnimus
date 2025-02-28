@@ -347,7 +347,8 @@ class DiscordClient:
         @app_commands.rename(role = 'rôle')
         @app_commands.describe(role =  'Role dont il faut lister les membres')
         async def whois(interaction: discord.Interaction,
-                        role: discord.Role):
+                        role: discord.Role,
+                        show: bool = False):
 
             embed = MessageTemplate(
                 description = (f'Les membres ayant le role {role.mention}'
@@ -360,7 +361,8 @@ class DiscordClient:
                 embed.add_field(name = '', value = ''.join(
                     [member.mention + '\n'
                      for member in role.members[i::max_fields]]))
-            await interaction.response.send_message(embed = embed)
+            await interaction.response.send_message(embed = embed,
+                                                    ephemeral = not show)
         
 
             
