@@ -323,32 +323,19 @@ class DiscordClient:
                 )
             await interaction.response.send_message(embed = embed)
 
-            
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Fais la liste des rôles possédés par l'utilisateur
-                           """)
-        @logging_command(self.logger)        
+
+        @self.tree.command(guild = self.thalos_guild)
         async def my_roles(interaction: discord.Interaction,
-                           text: str = 'hide'):
+                           show: bool = False):
             embed = MessageTemplate(
                 title = 'Tu possèdes les rôles suivants : ', 
                 description = ''.join(
                     [role.mention + '\n' for role in interaction.user.roles[::-1]]
                 ),
                 )
-            if text == 'hide':
-                await interaction.response.send_message(
-                    embed = embed, ephemeral = True)
-            elif text == 'show':
-                await interaction.response.send_message(
-                    embed = embed)
-            else:
-                embed = MessageTemplate(
-                    title = "Mauvais argument",
-                    description = (f"L'argment fourni ({text}) "
-                                   + "est incorrect"))
-                await interaction.response.send_message(embed = embed)
+            await interaction.response.send_message(
+                    embed = embed, ephemeral = not show)
+            
 
             
         @self.tree.command(guild = self.thalos_guild,
@@ -671,10 +658,12 @@ class DiscordClient:
         @self.client.event
         async def on_ready() -> None:
             self.logger.info(f"Logged as {self.client.user}")
+            #self.client.tree.clear_commands(guild = self.thalos_guild)
             for command in await self.client.tree.sync(
                     guild = self.thalos_guild):
                 self.logger.info(f'Command "{command.name}" synced to the app')
             self.logger.info("Commands added")
+
 
             
         @self.client.event
