@@ -321,7 +321,8 @@ class DiscordClient:
             embed = MessageTemplate(
                 description = text,
                 )
-            await interaction.response.send_message(embed = embed)
+            await interaction.response.send_message(embed = embed,
+                                                    ephemeral = True)
 
 
         @self.tree.command(guild = self.thalos_guild)
