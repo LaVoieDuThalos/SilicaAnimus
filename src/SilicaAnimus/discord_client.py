@@ -307,7 +307,8 @@ class DiscordClient:
                     f'Bot ping is {round(1000*self.client.latency)} ms'),
             )
             
-            await interaction.response.send_message(embed = embed)
+            await interaction.response.send_message(embed = embed,
+                                                    ephemeral = True)
             
             
         @self.tree.command(guild = self.thalos_guild,
