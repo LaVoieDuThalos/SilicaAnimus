@@ -46,9 +46,9 @@ class MessageTemplate(discord.Embed):
 
         super().__init__(*args, **kwargs)
         self.colour = discord.Colour.dark_red()
-        self.set_footer(icon_url = (
-            'https://voie-du-thalos.org/img/logo.png'),
-                        text = 'Application Discord pour La Voie du Thalos')
+        self.set_footer(
+            icon_url = 'https://voie-du-thalos.org/img/logo.png',
+            text = 'Application Discord pour La Voie du Thalos')
 
 class MemberProcessView(discord.ui.View):
 
