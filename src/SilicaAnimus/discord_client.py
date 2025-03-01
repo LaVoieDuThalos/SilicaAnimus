@@ -195,61 +195,61 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
         await interaction.response.send_message(embed = embed, 
                                                 ephemeral = True)        
 
-class MyView(discord.ui.View):
-    """
-    WIP
-    """
-    @discord.ui.button(label = 'Je cherche un adversaire',
-                       style = discord.ButtonStyle.primary)
-    async def button_search(self, interaction, button):
+# class MyView(discord.ui.View):
+#     """
+#     WIP
+#     """
+#     @discord.ui.button(label = 'Je cherche un adversaire',
+#                        style = discord.ButtonStyle.primary)
+#     async def button_search(self, interaction, button):
         
-        embed = interaction.message.embeds[0]
+#         embed = interaction.message.embeds[0]
 
-        for i, field in enumerate(embed.fields):
-            if field.name == 'Joueurs en attente':
-                my_field = field
-                field_ID = i
+#         for i, field in enumerate(embed.fields):
+#             if field.name == 'Joueurs en attente':
+#                 my_field = field
+#                 field_ID = i
 
-        new_user = interaction.user.mention
-        content = my_field.value
-        if new_user not in my_field.value:
-            content += f'\n{new_user}'
+#         new_user = interaction.user.mention
+#         content = my_field.value
+#         if new_user not in my_field.value:
+#             content += f'\n{new_user}'
 
-        embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                           value = content,
-                           inline = False)
-        await interaction.response.edit_message(embed = embed)
+#         embed.set_field_at(field_ID, name = 'Joueurs en attente',
+#                            value = content,
+#                            inline = False)
+#         await interaction.response.edit_message(embed = embed)
                 
-    # @discord.ui.button(label = 'Rejoindre une partie',
-    #                    style = discord.ButtonStyle.success)
-    # async def button_join(self, interaction, button):
-    #     content = interaction.message.content
-    #     print(interaction.message.embeds[0])
-    #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
-    #     await interaction.message.edit(content = edit)
+#     # @discord.ui.button(label = 'Rejoindre une partie',
+#     #                    style = discord.ButtonStyle.success)
+#     # async def button_join(self, interaction, button):
+#     #     content = interaction.message.content
+#     #     print(interaction.message.embeds[0])
+#     #     edit = content + f'\n{interaction.user.mention} a rejoint une partie'
+#     #     await interaction.message.edit(content = edit)
 
                 
-    @discord.ui.button(label = 'Se retirer',
-                       style = discord.ButtonStyle.danger)
-    async def button_exit(self, interaction, button):
-        embed = interaction.message.embeds[0]
-        for i, field in enumerate(embed.fields):
-            if field.name == "Joueurs en attente":
-                my_field = field
-                field_ID = i
+#     @discord.ui.button(label = 'Se retirer',
+#                        style = discord.ButtonStyle.danger)
+#     async def button_exit(self, interaction, button):
+#         embed = interaction.message.embeds[0]
+#         for i, field in enumerate(embed.fields):
+#             if field.name == "Joueurs en attente":
+#                 my_field = field
+#                 field_ID = i
 
-        user = interaction.user.mention
-        content = my_field.value
-        list_val = my_field.value.split('\n')
-        for val in list_val:
-            if user in val:
-                list_val.remove(val)
+#         user = interaction.user.mention
+#         content = my_field.value
+#         list_val = my_field.value.split('\n')
+#         for val in list_val:
+#             if user in val:
+#                 list_val.remove(val)
 
-        embed.set_field_at(field_ID, name = 'Joueurs en attente',
-                           value = '\n'.join(list_val),
-                           inline = False)
+#         embed.set_field_at(field_ID, name = 'Joueurs en attente',
+#                            value = '\n'.join(list_val),
+#                            inline = False)
 
-        await interaction.response.edit_message(embed = embed)
+#         await interaction.response.edit_message(embed = embed)
 
 
 class DiscordClient:
@@ -628,18 +628,18 @@ class DiscordClient:
 
                 
                 
-        @self.tree.command(guild = self.thalos_guild)
-        async def make_table(interaction: discord.Interaction):
-            embed = MessageTemplate(
-                title = 'Organisation du 14/12/24')
-            embed.add_field(name = 'Parties prévues (1v1)',
-                            value = '',
-                            inline = False)
-            embed.add_field(name = 'Joueurs en attente',
-                            value = '',
-                            inline = False)
-            await interaction.response.send_message(embed = embed,
-                                                    view = MyView())
+        # @self.tree.command(guild = self.thalos_guild)
+        # async def make_table(interaction: discord.Interaction):
+        #     embed = MessageTemplate(
+        #         title = 'Organisation du 14/12/24')
+        #     embed.add_field(name = 'Parties prévues (1v1)',
+        #                     value = '',
+        #                     inline = False)
+        #     embed.add_field(name = 'Joueurs en attente',
+        #                     value = '',
+        #                     inline = False)
+        #     await interaction.response.send_message(embed = embed,
+        #                                             view = MyView())
         
                             
             
