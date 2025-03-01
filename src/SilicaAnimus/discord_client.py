@@ -35,7 +35,6 @@ def logging_command(logger):
 
             logger.info(log_message)
             await command(interaction,*args)
-            logger.info(f'Command {command.__name__} finished')
 
         return command_with_logs
     return Inner
@@ -667,7 +666,13 @@ class DiscordClient:
                 self.logger.info(f'Command "{command.name}" synced to the app')
             self.logger.info("Commands added")
 
-
+        @self.client.event
+        async def on_app_command_completion(
+                interaction: discord.Interaction,
+                command: Union[discord.app_commands.Command,
+                               discord.app_commands.ContextMenu]):
+            self.logger.info(
+                f'Command {command.name} has successfully completed')
             
         @self.client.event
         async def on_message(message) -> None:
