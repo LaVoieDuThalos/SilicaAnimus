@@ -18,6 +18,10 @@ load_dotenv()
 
 
 class MessageTemplate(discord.Embed):
+    """
+    Template for embed messages posted by the bot into discord
+    channels
+    """
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
@@ -27,6 +31,9 @@ class MessageTemplate(discord.Embed):
             text = 'Application Discord pour La Voie du Thalos')
 
 class MemberProcessView(discord.ui.View):
+    """
+    View to get the membership status on discord
+    """
 
     def __init__(self, client, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -135,6 +142,9 @@ class MemberProcessView(discord.ui.View):
         
 class MemberProcessModal(discord.ui.Modal,
                          title = 'Devenir membre sur le discord'):
+    """
+    Modal getting first and last names of the user using a form
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.member_role = 'Membres Thalos'
@@ -156,6 +166,9 @@ class MemberProcessModal(discord.ui.Modal,
 
 
 class CheckModal(discord.ui.Modal, title = 'Informations'):
+    """
+    Check if the given name / surname is member of the association
+    """
     prenom = discord.ui.TextInput(label = 'Prénom',
                                   placeholder = 'Paul')
     nom = discord.ui.TextInput(label = 'Nom',
@@ -183,6 +196,9 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
                                                 ephemeral = True)        
 
 class MyView(discord.ui.View):
+    """
+    WIP
+    """
     @discord.ui.button(label = 'Je cherche un adversaire',
                        style = discord.ButtonStyle.primary)
     async def button_search(self, interaction, button):
@@ -286,10 +302,9 @@ class DiscordClient:
                                                     ephemeral = True)
             
             
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           L'application répète le message envoyé
-                           """)
+        @self.tree.command(
+            guild = self.thalos_guild,
+            description = "L'application répète le message envoyé")
         @app_commands.describe(text = 'Texte à répéter')
         @app_commands.rename(text = 'texte')
         async def echo(interaction: discord.Interaction, text: str):
