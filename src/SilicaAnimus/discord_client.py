@@ -17,29 +17,6 @@ from google_sheets_client import GoogleSheetsClient, MemberInfo
 load_dotenv()
 
 
-def logging_command(logger):
-    """ write logs when activating commands. Not working on some commands
-    for unknown reason"""
-    def Inner(command):
-        
-        @functools.wraps(command)
-        async def command_with_logs(interaction: discord.Interaction,
-                                    *args: Union[None, str,
-                                                 discord.Member,
-                                                 discord.User,
-                                                 discord.Role]):
-            log_message = (f'Command {command.__name__} called '
-                           + f'by {interaction.user.name}')
-            for arg in args:
-                log_message += f'with argument {arg}'
-
-            logger.info(log_message)
-            await command(interaction,*args)
-
-        return command_with_logs
-    return Inner
-    
-
 class MessageTemplate(discord.Embed):
     def __init__(self, *args, **kwargs):
 
@@ -298,7 +275,6 @@ class DiscordClient:
                            Envoie un signal à l'application et affiche le
                            temps de latence
                            """)
-        @logging_command(self.logger)
         async def ping(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Pong !',
@@ -425,7 +401,6 @@ class DiscordClient:
                            description = """
                            Vérifie si une personne est adhérente de
                            l'association """)
-        @logging_command(logger = self.logger)
         async def check_member(interaction: discord.Interaction):
             data = {'prenom' : '',
                     'nom' : ''}
@@ -436,7 +411,6 @@ class DiscordClient:
         @self.tree.command(guild = self.thalos_guild,
                            description = """Ajoute le membre au groupe des
                            adhérents sur le discord""")
-        @logging_command(logger = self.logger)
         async def make_membercheck(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Obtenir votre role de membre sur le discord',
@@ -451,7 +425,6 @@ class DiscordClient:
                            description = """
                            Lance la procédure de mise à jour des adhérents sur
                            le discord""")
-        @logging_command(logger = self.logger)
         async def update_member_list(interaction: discord.Interaction):
             role = interaction.guild.get_role(1310285968393371770)
             member_list = await self.gsheet_client.get_members_by_discord_names(
@@ -641,7 +614,6 @@ class DiscordClient:
                 
                 
         @self.tree.command(guild = self.thalos_guild)
-        @logging_command(logger = self.logger)
         async def make_table(interaction: discord.Interaction):
             embed = MessageTemplate(
                 title = 'Organisation du 14/12/24')
@@ -673,6 +645,16 @@ class DiscordClient:
                                discord.app_commands.ContextMenu]):
             self.logger.info(
                 f'Command {command.name} has successfully completed')
+
+        @self.client.event
+        async def on_interaction(interaction: discord.Interaction):
+            if not interaction.command is None:
+                self.logger.info(
+                    f'Command {interaction.command.name}'
+                    + f' is called by {interaction.user}'
+                    + f' with these arguments :'
+                    + f' {interaction.namespace}')
+                
             
         @self.client.event
         async def on_message(message) -> None:
