@@ -251,6 +251,56 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
 
 #         await interaction.response.edit_message(embed = embed)
 
+class UpdateMemberButtons(discord.ui.View):
+    def __init__(self, logger, embed, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = logger
+        self.embed = embed
+                
+    @discord.ui.button(label = 'Afficher les membres masqués',
+                       style = discord.ButtonStyle.primary,
+                       disabled = True,
+                       custom_id = 'display')
+    async def button_display(self, interaction, button):
+        pass
+                
+    @discord.ui.button(label = 'Confirmer',
+                       style = discord.ButtonStyle.success,
+                       disabled = False,
+                       custom_id = 'confirm')
+    async def button_confirm(self, interaction, button):
+        await interaction.response.defer()
+        for user in to_unmember:
+            user = interaction.guild.get_member_named(user)
+            await user.remove_roles(role)                        
+            self.logger.info(
+                f'{user} is removed from the member list')
+
+        for user in to_member:
+            user = interaction.guild.get_member_named(user)
+            await user.add_roles(role)
+            self.logger.info(f'{user} is added to the member list')
+
+        self.embed.description = 'Liste des membres mise à jour'
+        self.embed.clear_fields()
+        await interaction.followup.send(embed = embed)
+
+                
+    @discord.ui.button(label = 'Annuler',
+                       style = discord.ButtonStyle.danger,
+                       disabled = False,
+                       custom_id = 'cancel')
+    async def button_cancel(self, interaction, button):
+        for item in self.children:
+            item.disabled = True
+            
+        self.embed.description = 'COMMANDE ANNULÉE'
+        self.embed.clear_fields()
+            
+        await interaction.response.edit_message(embed = self.embed,
+                                                view = self)
+
+
 @app_commands.command(
     description = """
     Envoie un signal à l'application et affiche le temps de latence
@@ -395,10 +445,6 @@ async def make_membercheck(interaction: discord.Interaction):
                                 client = client.parent_client)
     await interaction.response.send_message(embed = embed,
                                             view = buttons)
-
-
-""""""
-
         
 @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
 @app_commands.context_menu(name = 'Informations utilisateur')
@@ -427,6 +473,128 @@ async def info(interaction: discord.Interaction,
     await interaction.response.send_message(embed = embed,
                                             ephemeral = True)
 
+""""""
+
+            
+@app_commands.command(
+    description = """
+    Lance la procédure de mise à jour des adhérents sur le discord"""
+    )
+async def update_member_list(interaction: discord.Interaction):
+    role = interaction.guild.get_role(1310285968393371770)
+    client = interaction.client
+    parent = client.parent_client
+    member_list = await parent.gsheet_client.get_members_by_discord_names(
+        [member.name for member in interaction.guild.members])
+
+    to_member = []
+    to_unmember = []
+    to_keep = []
+    unaffected = []
+    for member in member_list:
+        member_obj = interaction.guild.get_member_named(
+            member.discord_nickname)
+        if member.member_current_year and role in member_obj.roles:
+            to_keep.append(member.discord_nickname)
+        elif member.member_current_year:
+            to_member.append(member.discord_nickname)
+        elif role in member_obj.roles:
+            to_unmember.append(member.discord_nickname)
+        else:
+            unaffected.append(member.discord_nickname)
+
+    embed = MessageTemplate(
+        title = """ Mise à jour des adhérents sur le Discord""")
+
+    # get the user list to member
+    to_mem_str = ', '.join(
+        [interaction.guild.get_member_named(member).mention
+         for member in to_member])
+
+    # get members to display
+    if len(to_mem_str) > 1000:
+        display_mem_l = to_mem_str[:1000].split(',')[:-1]
+    else:
+        display_mem_l = to_mem_str.split(',')
+
+    hidden_member_members = len(to_member) - len(display_mem_l)
+
+    # make message
+    to_mem_str_short = (
+        ','.join(display_mem_l)
+        + f'\n{max(0, hidden_member_members)}')
+    if hidden_member_members <= 1:
+        to_mem_str_short += ' utilisateur masqué'
+    else:
+        to_mem_str_short += ' utilisateurs masqués'
+        
+    # get the user list to unmember    
+    to_unmem_str = ', '.join(
+        [interaction.guild.get_member_named(member).mention
+         for member in to_unmember])
+
+    # get unmembers to display
+    if len(to_unmem_str) > 1000:
+        display_unmem_l = to_unmem_str[:1000].split(',')[:-1]
+    else:
+        display_unmem_l = to_unmem_str.split(',')
+        
+    hidden_unmem_members = len(to_unmember) - len(display_unmem_l)
+            
+    # make message            
+    to_unmem_str_short = (
+        ','.join(display_unmem_l)
+        + f'\n{max(0, hidden_unmem_members)}')
+    if hidden_unmem_members <= 1:
+        to_unmem_str_short += ' utilisateur masqué'
+    else:
+        to_unmem_str_short += ' utilisateurs masqués'                
+            
+    # get members unchanged     
+    to_keep_str = ', '.join(
+        [interaction.guild.get_member_named(member).mention
+         for member in to_keep])
+
+    # get members unchanged to display
+    if len(to_keep_str) > 1000:
+        display_keep_l = to_keep_str[:1000].split(',')[:-1]
+    else:
+        display_keep_l = to_keep_str.split(',')
+
+    hidden_keep_members = len(to_keep) - len(display_keep_l)
+            
+    # make message            
+    to_keep_str_short = (
+        ','.join(display_keep_l)
+        + f'\n{max(0, hidden_keep_members)}')
+    if hidden_keep_members <= 1:
+        to_keep_str_short += ' utilisateur masqué'
+    else:
+        to_keep_str_short += ' utilisateurs masqués'
+                
+    embed.add_field(
+        name = 'Ces utilisateurs gagneront le role membre :',
+        value = to_mem_str_short,
+        inline = False)
+    embed.add_field(
+        name = 'Ces utilisateurs conserveront leur role membre :',
+        value = to_keep_str_short,
+        inline = False)
+    embed.add_field(
+        name = 'Ces utilisateurs perdront leur role membre :',
+        value = to_unmem_str_short,
+        inline = False)
+
+
+
+
+                    
+    buttons = UpdateMemberButtons(logger = client.logger, embed = embed)
+
+
+    await interaction.response.send_message(embed = embed,
+                                            view = buttons)
+
 
     
 class ThalosBot(commands.Bot):
@@ -435,7 +603,7 @@ class ThalosBot(commands.Bot):
         self.logger.info('Running setup hook')
         commands = [
             ping, echo, my_roles, whois, pin, check_member, give_role,
-            make_membercheck, info,
+            make_membercheck, info, update_member_list,
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -503,172 +671,6 @@ class DiscordClient:
 
         self.start_future = None
         self.run = True
-
-
-
-            
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Lance la procédure de mise à jour des adhérents sur
-                           le discord""")
-        async def update_member_list(interaction: discord.Interaction):
-            role = interaction.guild.get_role(1310285968393371770)
-            member_list = await self.gsheet_client.get_members_by_discord_names(
-                [member.name for member in interaction.guild.members])
-
-            to_member = []
-            to_unmember = []
-            to_keep = []
-            unaffected = []
-            for member in member_list:
-                member_obj = interaction.guild.get_member_named(member.discord_nickname)
-                if member.member_current_year and role in member_obj.roles:
-                    to_keep.append(member.discord_nickname)
-                elif member.member_current_year:
-                    to_member.append(member.discord_nickname)
-                elif role in member_obj.roles:
-                    to_unmember.append(member.discord_nickname)
-                else:
-                    unaffected.append(member.discord_nickname)
-
-            embed = MessageTemplate(
-                title = """ Mise à jour des adhérents sur le Discord""")
-
-            # get the user list to member
-            to_mem_str = ', '.join(
-                [interaction.guild.get_member_named(member).mention
-                 for member in to_member])
-
-            # get members to display
-            if len(to_mem_str) > 1000:
-                display_mem_l = to_mem_str[:1000].split(',')[:-1]
-            else:
-                display_mem_l = to_mem_str.split(',')
-
-            hidden_member_members = len(to_member) - len(display_mem_l)
-
-            # make message
-            to_mem_str_short = (
-                ','.join(display_mem_l)
-                + f'\n{max(0, hidden_member_members)}')
-            if hidden_member_members <= 1:
-                to_mem_str_short += ' utilisateur masqué'
-            else:
-                to_mem_str_short += ' utilisateurs masqués'
-            
-            # get the user list to unmember    
-            to_unmem_str = ', '.join(
-                [interaction.guild.get_member_named(member).mention
-                 for member in to_unmember])
-
-            # get unmembers to display
-            if len(to_unmem_str) > 1000:
-                display_unmem_l = to_unmem_str[:1000].split(',')[:-1]
-            else:
-                display_unmem_l = to_unmem_str.split(',')
-
-            hidden_unmem_members = len(to_unmember) - len(display_unmem_l)
-            
-            # make message            
-            to_unmem_str_short = (
-                ','.join(display_unmem_l)
-                + f'\n{max(0, hidden_unmem_members)}')
-            if hidden_unmem_members <= 1:
-                to_unmem_str_short += ' utilisateur masqué'
-            else:
-                to_unmem_str_short += ' utilisateurs masqués'                
-            
-            # get members unchanged     
-            to_keep_str = ', '.join(
-                [interaction.guild.get_member_named(member).mention
-                 for member in to_keep])
-
-            # get members unchanged to display
-            if len(to_keep_str) > 1000:
-                display_keep_l = to_keep_str[:1000].split(',')[:-1]
-            else:
-                display_keep_l = to_keep_str.split(',')
-
-            hidden_keep_members = len(to_keep) - len(display_keep_l)
-            
-            # make message            
-            to_keep_str_short = (
-                ','.join(display_keep_l)
-                + f'\n{max(0, hidden_keep_members)}')
-            if hidden_keep_members <= 1:
-                to_keep_str_short += ' utilisateur masqué'
-            else:
-                to_keep_str_short += ' utilisateurs masqués'
-                
-            embed.add_field(
-                name = 'Ces utilisateurs gagneront le role membre :',
-                value = to_mem_str_short,
-                inline = False)
-            embed.add_field(
-                name = 'Ces utilisateurs conserveront leur role membre :',
-                value = to_keep_str_short,
-                inline = False)
-            embed.add_field(
-                name = 'Ces utilisateurs perdront leur role membre :',
-                value = to_unmem_str_short,
-                inline = False)
-
-            class Buttons(discord.ui.View):
-                def __init__(self, logger, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-                    self.logger = logger
-                
-                @discord.ui.button(label = 'Afficher les membres masqués',
-                                   style = discord.ButtonStyle.primary,
-                                   disabled = True,
-                                   custom_id = 'display')
-                async def button_display(self, interaction, button):
-                    pass
-                
-                @discord.ui.button(label = 'Confirmer',
-                                   style = discord.ButtonStyle.success,
-                                   disabled = False,
-                                   custom_id = 'confirm')
-                async def button_confirm(self, interaction, button):
-                    await interaction.response.defer()
-                    for user in to_unmember:
-                        user = interaction.guild.get_member_named(user)
-                        await user.remove_roles(role)                        
-                        self.logger.info(
-                            f'{user} is removed from the member list')
-
-                    for user in to_member:
-                        user = interaction.guild.get_member_named(user)
-                        await user.add_roles(role)
-                        self.logger.info(f'{user} is added to the member list')
-
-                    embed.description = 'Liste des membres mise à jour'
-                    embed.clear_fields()
-                    await interaction.followup.send(embed = embed)
-
-                
-                @discord.ui.button(label = 'Annuler',
-                                   style = discord.ButtonStyle.danger,
-                                   disabled = False,
-                                   custom_id = 'cancel')
-                async def button_cancel(self, interaction, button):
-                    for item in self.children:
-                        item.disabled = True
-
-                    embed.description = 'COMMANDE ANNULÉE'
-                    embed.clear_fields()
-
-                    await interaction.response.edit_message(embed = embed,
-                                                            view = buttons)
-
-
-
-                    
-            buttons = Buttons(logger = self.logger)
-
-
-            await interaction.response.send_message(embed = embed,
-                                                    view = buttons)
 
                 
                 
