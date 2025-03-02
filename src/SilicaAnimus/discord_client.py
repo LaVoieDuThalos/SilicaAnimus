@@ -396,6 +396,38 @@ async def make_membercheck(interaction: discord.Interaction):
     await interaction.response.send_message(embed = embed,
                                             view = buttons)
 
+
+""""""
+
+        
+@app_commands.checks.has_any_role('Administrateurs', 'Bureau')
+@app_commands.context_menu(name = 'Informations utilisateur')
+async def info(interaction: discord.Interaction,
+               member: discord.Member):
+    client = interaction.client
+    parent = client.parent_client
+
+    first_name = 'INCONNU'
+    last_name = 'INCONNU'
+
+    member_info: MemberInfo = (
+        await parent.gsheet_client.get_member_by_discord_name(
+            member.name)
+    )
+
+    if member_info.in_spreadsheet:
+        first_name = member_info.first_name
+        last_name = member_info.last_name
+            
+    embed = MessageTemplate(title = "Informations sur l'utilisateur :")
+    embed.add_field(name = 'Pseudo discord', value = member.mention)
+    embed.add_field(name = 'Nom', value = last_name)
+    embed.add_field(name = 'Prénom', value = first_name)
+                                    
+    await interaction.response.send_message(embed = embed,
+                                            ephemeral = True)
+
+
     
 class ThalosBot(commands.Bot):
 
@@ -403,7 +435,7 @@ class ThalosBot(commands.Bot):
         self.logger.info('Running setup hook')
         commands = [
             ping, echo, my_roles, whois, pin, check_member, give_role,
-            make_membercheck,
+            make_membercheck, info,
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -637,33 +669,6 @@ class DiscordClient:
 
             await interaction.response.send_message(embed = embed,
                                                     view = buttons)
-
-        
-        @app_commands.checks.has_any_role('Administrateurs', 'Bureau')
-        @self.tree.context_menu(name = 'Informations utilisateur',
-                                guild = self.thalos_guild)
-        async def info(interaction: discord.Interaction,
-                       member: discord.Member):
-            self.logger.info(f'context info called by {interaction.user.name}')
-
-            first_name = 'INCONNU'
-            last_name = 'INCONNU'
-
-            member_info: MemberInfo = (
-                await self.gsheet_client.get_member_by_discord_name(
-                    member.name)
-                )
-
-            if member_info.in_spreadsheet:
-                first_name = member_info.first_name
-                last_name = member_info.last_name
-            
-            embed = MessageTemplate(title = "Informations sur l'utilisateur :")
-            embed.add_field(name = 'Pseudo discord', value = member.mention)
-            embed.add_field(name = 'Nom', value = last_name)
-            embed.add_field(name = 'Prénom', value = first_name)
-                                    
-            await interaction.response.send_message(embed = embed, ephemeral = True)
 
                 
                 
