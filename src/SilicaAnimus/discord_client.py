@@ -277,13 +277,52 @@ async def echo(interaction: discord.Interaction, text: str):
     await interaction.response.send_message(embed = embed,
                                             ephemeral = True)
 
+@app_commands.command(
+    description = 'Fais la listes des rôles que tu possèdes')
+@app_commands.describe(show = 'Envoyer la réponse en public ?')
+@app_commands.rename(show = 'montrer')
+async def my_roles(interaction: discord.Interaction,
+                   show: bool = False):
+    embed = MessageTemplate(
+        title = 'Tu possèdes les rôles suivants : ', 
+        description = ''.join(
+            [role.mention + '\n' for role in interaction.user.roles[::-1]]
+        ),
+    )
+    await interaction.response.send_message(
+        embed = embed, ephemeral = not show)
 
+@app_commands.command(
+    description = """
+    Affiche les utilisateurs ayant le rôle fourni en paramètre
+    """)
+@app_commands.rename(role = 'rôle')
+@app_commands.describe(role =  'Role dont il faut lister les membres')
+async def whois(interaction: discord.Interaction,
+                role: discord.Role,
+                show: bool = False):
+    embed = MessageTemplate(
+        description = f'Les membres ayant le role {role.mention} sont :')
+    max_fields = 25
+    number_by_field = len(role.members) // max_fields + 1
+
+    for i in range(min(max_fields, len(role.members))):
+        embed.add_field(name = '', value = ''.join(
+            [member.mention + '\n'
+             for member in role.members[i::max_fields]]))
+    await interaction.response.send_message(embed = embed,
+                                            ephemeral = not show)
+
+    
 class ThalosBot(commands.Bot):
 
     async def setup_hook(self):
         self.logger.info('Running setup hook')
-        self.tree.add_command(ping, guild = self.thalos_guild)
-        self.tree.add_command(echo, guild = self.thalos_guild)        
+        commands = [
+            ping, echo, my_roles, whois,
+            ]
+        for command in commands:
+            self.tree.add_command(command, guild = self.thalos_guild)
 
 
     async def on_ready(self) -> None:
@@ -349,45 +388,7 @@ class DiscordClient:
         self.start_future = None
         self.run = True
 
-
-        @self.tree.command(guild = self.thalos_guild)
-        async def my_roles(interaction: discord.Interaction,
-                           show: bool = False):
-            embed = MessageTemplate(
-                title = 'Tu possèdes les rôles suivants : ', 
-                description = ''.join(
-                    [role.mention + '\n' for role in interaction.user.roles[::-1]]
-                ),
-                )
-            await interaction.response.send_message(
-                    embed = embed, ephemeral = not show)
             
-
-            
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Affiche les utilisateurs ayant le rôle fourni en
-                           paramètre
-                           """)
-        @app_commands.rename(role = 'rôle')
-        @app_commands.describe(role =  'Role dont il faut lister les membres')
-        async def whois(interaction: discord.Interaction,
-                        role: discord.Role,
-                        show: bool = False):
-
-            embed = MessageTemplate(
-                description = (f'Les membres ayant le role {role.mention}'
-                               + 'sont :'), 
-                )
-            max_fields = 25
-            number_by_field = len(role.members) // max_fields + 1
-
-            for i in range(min(max_fields, len(role.members))):
-                embed.add_field(name = '', value = ''.join(
-                    [member.mention + '\n'
-                     for member in role.members[i::max_fields]]))
-            await interaction.response.send_message(embed = embed,
-                                                    ephemeral = not show)
         
 
             
