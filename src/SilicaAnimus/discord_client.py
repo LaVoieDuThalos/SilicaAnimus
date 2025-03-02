@@ -327,6 +327,16 @@ async def pin(interaction: discord.Interaction,
         await interaction.response.send_message(e, ephemeral = True)
 
 
+@app_commands.checks.has_role('Administrateurs')
+@app_commands.command(
+    description =
+    """ Vérifie si une personne est adhérente de l'association """)
+async def check_member(interaction: discord.Interaction):
+    data = {'prenom' : '',
+            'nom' : ''}
+    modal = CheckModal()
+    await interaction.response.send_modal(modal)
+    await modal.wait()
 
     
 class ThalosBot(commands.Bot):
@@ -334,7 +344,7 @@ class ThalosBot(commands.Bot):
     async def setup_hook(self):
         self.logger.info('Running setup hook')
         commands = [
-            ping, echo, my_roles, whois, pin, 
+            ping, echo, my_roles, whois, pin, check_member, 
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -403,10 +413,6 @@ class DiscordClient:
         self.start_future = None
         self.run = True
 
-            
-        
-
-                
         @app_commands.checks.has_role('Administrateurs')
         @self.tree.command(guild = self.thalos_guild,
                            description = """
@@ -447,17 +453,6 @@ class DiscordClient:
             await interaction.followup.send(embed = embed)
 
 
-        @app_commands.checks.has_role('Administrateurs')
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Vérifie si une personne est adhérente de
-                           l'association """)
-        async def check_member(interaction: discord.Interaction):
-            data = {'prenom' : '',
-                    'nom' : ''}
-            modal = CheckModal()
-            await interaction.response.send_modal(modal)
-            await modal.wait()
 
         @self.tree.command(guild = self.thalos_guild,
                            description = """Ajoute le membre au groupe des
