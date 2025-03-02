@@ -381,6 +381,21 @@ async def give_role(
             description = message)
     await interaction.followup.send(embed = embed,
                                     ephemeral = not show)
+
+
+@app_commands.command(description =
+                      """Ajoute le membre au groupe des
+                      adhérents sur le discord""")
+async def make_membercheck(interaction: discord.Interaction):
+    client = interaction.client
+    embed = MessageTemplate(
+        title = 'Obtenir votre role de membre sur le discord',
+        description = '')
+    buttons = MemberProcessView(timeout = None,
+                                client = client.parent_client)
+    await interaction.response.send_message(embed = embed,
+                                            view = buttons)
+
     
 class ThalosBot(commands.Bot):
 
@@ -388,6 +403,7 @@ class ThalosBot(commands.Bot):
         self.logger.info('Running setup hook')
         commands = [
             ping, echo, my_roles, whois, pin, check_member, give_role,
+            make_membercheck,
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -457,18 +473,6 @@ class DiscordClient:
         self.run = True
 
 
-
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """Ajoute le membre au groupe des
-                           adhérents sur le discord""")
-        async def make_membercheck(interaction: discord.Interaction):
-            embed = MessageTemplate(
-                title = 'Obtenir votre role de membre sur le discord',
-                description = '')
-            buttons = MemberProcessView(timeout = None,
-                                        client = self.client.parent_client)
-            await interaction.response.send_message(embed = embed,
-                                                    view = buttons)
 
             
         @self.tree.command(guild = self.thalos_guild,
