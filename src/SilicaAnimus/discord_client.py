@@ -313,13 +313,28 @@ async def whois(interaction: discord.Interaction,
     await interaction.response.send_message(embed = embed,
                                             ephemeral = not show)
 
+            
+@app_commands.context_menu(name = 'Epingler')
+@app_commands.checks.has_role('Administrateurs')
+async def pin(interaction: discord.Interaction,
+              message: discord.Message):
+    try:
+        await message.pin()
+        embed = MessageTemplate(description = 'Message épinglé !')
+        await interaction.response.send_message(embed = embed,
+                                                ephemeral = True)
+    except discord.errors.HTTPException as e:
+        await interaction.response.send_message(e, ephemeral = True)
+
+
+
     
 class ThalosBot(commands.Bot):
 
     async def setup_hook(self):
         self.logger.info('Running setup hook')
         commands = [
-            ping, echo, my_roles, whois,
+            ping, echo, my_roles, whois, pin, 
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -390,21 +405,6 @@ class DiscordClient:
 
             
         
-
-            
-        @self.tree.context_menu(name = 'Epingler',
-                                guild = self.thalos_guild)
-        @app_commands.checks.has_role('Administrateurs')
-        async def pin(interaction: discord.Interaction,
-                      message: discord.Message):
-            try:
-                await message.pin()
-                embed = MessageTemplate(description = 'Message épinglé !')
-                await interaction.response.send_message(embed = embed,
-                                                        ephemeral = True)
-            except discord.errors.HTTPException as e:
-                await interaction.response.send_message(e, ephemeral = True)
-
 
                 
         @app_commands.checks.has_role('Administrateurs')
