@@ -251,15 +251,48 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
 
 #         await interaction.response.edit_message(embed = embed)
 
-class MyBot(commands.Bot):
-    # Events
+@app_commands.command(
+    description = """
+    Envoie un signal à l'application et affiche le temps de latence
+    """)
+async def ping(interaction: discord.Interaction):
+    client = interaction.client
+    embed = MessageTemplate(
+        title = 'Pong Pong!',
+        description = (
+            f'Bot ping is {round(1000*client.latency)} ms'))
+    
+    await interaction.response.send_message(embed = embed,
+                                            ephemeral = True)
+
+
+@app_commands.command(
+    description = "L'application répète le message envoyé")
+@app_commands.describe(text = 'Texte à répéter')
+@app_commands.rename(text = 'texte')
+async def echo(interaction: discord.Interaction, text: str):
+    embed = MessageTemplate(
+        description = text,
+    )
+    await interaction.response.send_message(embed = embed,
+                                            ephemeral = True)
+
+
+class ThalosBot(commands.Bot):
+
+    async def setup_hook(self):
+        self.logger.info('Running setup hook')
+        self.tree.add_command(ping, guild = self.thalos_guild)
+        self.tree.add_command(echo, guild = self.thalos_guild)        
+
+
     async def on_ready(self) -> None:
         self.logger.info(f"Logged as {self.user}")
         #self.client.tree.clear_commands(guild = self.thalos_guild)
-        # for command in await self.client.tree.sync(
-        #         guild = self.thalos_guild): 
-            # self.logger.info(f'Command "{command.name}" synced to the app')
-            # self.logger.info("Commands added")
+        for command in await self.tree.sync(
+                guild = self.thalos_guild): 
+            self.logger.info(f'Command "{command.name}" synced to the app')
+        self.logger.info("Commands added")
 
 
     async def on_app_command_completion(self,
@@ -277,17 +310,6 @@ class MyBot(commands.Bot):
                 + f' is called by {interaction.user}'
                 + f' with these arguments :'
                 + f' {interaction.namespace}')
-
-    @app_commands.command()
-    async def ping(self, interaction: discord.Interaction):
-        embed = MessageTemplate(
-            title = 'Pong Pong!',
-            description = (
-                f'Bot ping is {round(1000*self.client.latency)} ms'))
-            
-        await interaction.response.send_message(embed = embed,
-                                                ephemeral = True)
-    
 
 class DiscordClient:
     """The Discord client class"""
@@ -309,7 +331,8 @@ class DiscordClient:
         self.gsheet_client: GoogleSheetsClient = gsheet_client
 
         self.client = commands.Bot(command_prefix = '!', intents = self.intents)
-        self.client = MyBot(command_prefix = '!', intents = self.intents)
+        self.client = ThalosBot(
+            command_prefix = '!', intents = self.intents)
 
         
         self.client.parent_client = self
@@ -319,40 +342,12 @@ class DiscordClient:
         self.logger = self.client.logger = logging.getLogger(__name__)
 
         self.token = token
-        self.thalos_guild = None
+        self.client.thalos_guild = self.thalos_guild = None
         self.thalos_role = None
+
 
         self.start_future = None
         self.run = True
-
-        # Commands
-        # @self.tree.command(guild = self.thalos_guild,
-        #                    description = """
-        #                    Envoie un signal à l'application et affiche le
-        #                    temps de latence
-        #                    """)
-        # async def ping(interaction: discord.Interaction):
-        #     embed = MessageTemplate(
-        #         title = 'Pong !',
-        #         description = (
-        #             f'Bot ping is {round(1000*self.client.latency)} ms'),
-        #     )
-            
-        #     await interaction.response.send_message(embed = embed,
-        #                                             ephemeral = True)
-            
-            
-        @self.tree.command(
-            guild = self.thalos_guild,
-            description = "L'application répète le message envoyé")
-        @app_commands.describe(text = 'Texte à répéter')
-        @app_commands.rename(text = 'texte')
-        async def echo(interaction: discord.Interaction, text: str):
-            embed = MessageTemplate(
-                description = text,
-                )
-            await interaction.response.send_message(embed = embed,
-                                                    ephemeral = True)
 
 
         @self.tree.command(guild = self.thalos_guild)
