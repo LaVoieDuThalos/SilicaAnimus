@@ -338,13 +338,56 @@ async def check_member(interaction: discord.Interaction):
     await interaction.response.send_modal(modal)
     await modal.wait()
 
+
+@app_commands.checks.has_role('Administrateurs')
+@app_commands.command(
+    description = """
+    Donne un rôle à tous les membres ayant le rôle fourni en paramètre
+    """)
+@app_commands.describe(
+    role_given = 'Rôle à donner',
+    user_group = """Groupe d'utilisateurs recevant le nouveau rôle"""
+    )
+async def give_role(
+        interaction: discord.Interaction,
+        role_given: discord.Role,
+        user_group: discord.Role,
+        show: bool = False):
+    client = interaction.client
+
+    message = ''
+    await interaction.response.defer()
+    for member in user_group.members:
+        try:
+            await member.add_roles(role_given)
+            message = (
+                message
+                + f'Le role {role_given.mention} '
+                + f'est accordé à {member.mention}\n'
+            )
+            client.logger.info(message)
+            
+        except Exception as e:
+            message += str(e)
+            embed = MessageTemplate(
+                title = 'Une erreur est survenue...',
+                description = message
+            )
+            await interaction.followup.send(embed = embed)
+            raise
+
+        embed = MessageTemplate(
+            title = 'Affectation de roles :',
+            description = message)
+    await interaction.followup.send(embed = embed,
+                                    ephemeral = not show)
     
 class ThalosBot(commands.Bot):
 
     async def setup_hook(self):
         self.logger.info('Running setup hook')
         commands = [
-            ping, echo, my_roles, whois, pin, check_member, 
+            ping, echo, my_roles, whois, pin, check_member, give_role,
             ]
         for command in commands:
             self.tree.add_command(command, guild = self.thalos_guild)
@@ -412,45 +455,6 @@ class DiscordClient:
 
         self.start_future = None
         self.run = True
-
-        @app_commands.checks.has_role('Administrateurs')
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Donne un rôle à tous les membres ayant le rôle
-                           fourni en paramètre
-                           """)
-        @app_commands.describe(role_given = 'Rôle à donner',
-                               user_group = """Groupe d'utilisateurs recevant
-                               le nouveau rôle""")
-        async def give_role(interaction: discord.Interaction,
-                            role_given: discord.Role,
-                            user_group: discord.Role):
-
-            message = ''
-            await interaction.response.defer()
-            for member in user_group.members:
-                try:
-                    await member.add_roles(role_given)
-                    message = (
-                        message
-                        + f'Le role {role_given.mention} '
-                        + f'est accordé à {member.mention}\n'
-                        )
-                    self.logger.info(message)
-                    
-                except Exception as e:
-                    message += str(e)
-                    embed = MessageTemplate(
-                        title = 'Une erreur est survenue...',
-                        description = message
-                        )
-                    await interaction.followup.send(embed = embed)
-                    raise
-
-            embed = MessageTemplate(
-                title = 'Affectation de roles :',
-                description = message)
-            await interaction.followup.send(embed = embed)
 
 
 
