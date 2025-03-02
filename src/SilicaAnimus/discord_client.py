@@ -251,6 +251,43 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
 
 #         await interaction.response.edit_message(embed = embed)
 
+class MyBot(commands.Bot):
+    # Events
+    async def on_ready(self) -> None:
+        self.logger.info(f"Logged as {self.user}")
+        #self.client.tree.clear_commands(guild = self.thalos_guild)
+        # for command in await self.client.tree.sync(
+        #         guild = self.thalos_guild): 
+            # self.logger.info(f'Command "{command.name}" synced to the app')
+            # self.logger.info("Commands added")
+
+
+    async def on_app_command_completion(self,
+            interaction: discord.Interaction,
+            command: Union[discord.app_commands.Command,
+                           discord.app_commands.ContextMenu]):
+        self.logger.info(
+            f'Command {command.name} has successfully completed')
+
+
+    async def on_interaction(self, interaction: discord.Interaction):
+        if not interaction.command is None:
+            self.logger.info(
+                f'Command {interaction.command.name}'
+                + f' is called by {interaction.user}'
+                + f' with these arguments :'
+                + f' {interaction.namespace}')
+
+    @app_commands.command()
+    async def ping(self, interaction: discord.Interaction):
+        embed = MessageTemplate(
+            title = 'Pong Pong!',
+            description = (
+                f'Bot ping is {round(1000*self.client.latency)} ms'))
+            
+        await interaction.response.send_message(embed = embed,
+                                                ephemeral = True)
+    
 
 class DiscordClient:
     """The Discord client class"""
@@ -272,11 +309,14 @@ class DiscordClient:
         self.gsheet_client: GoogleSheetsClient = gsheet_client
 
         self.client = commands.Bot(command_prefix = '!', intents = self.intents)
+        self.client = MyBot(command_prefix = '!', intents = self.intents)
+
+        
         self.client.parent_client = self
         self.tree = self.client.tree
 
         
-        self.logger = logging.getLogger(__name__)
+        self.logger = self.client.logger = logging.getLogger(__name__)
 
         self.token = token
         self.thalos_guild = None
@@ -286,20 +326,20 @@ class DiscordClient:
         self.run = True
 
         # Commands
-        @self.tree.command(guild = self.thalos_guild,
-                           description = """
-                           Envoie un signal à l'application et affiche le
-                           temps de latence
-                           """)
-        async def ping(interaction: discord.Interaction):
-            embed = MessageTemplate(
-                title = 'Pong !',
-                description = (
-                    f'Bot ping is {round(1000*self.client.latency)} ms'),
-            )
+        # @self.tree.command(guild = self.thalos_guild,
+        #                    description = """
+        #                    Envoie un signal à l'application et affiche le
+        #                    temps de latence
+        #                    """)
+        # async def ping(interaction: discord.Interaction):
+        #     embed = MessageTemplate(
+        #         title = 'Pong !',
+        #         description = (
+        #             f'Bot ping is {round(1000*self.client.latency)} ms'),
+        #     )
             
-            await interaction.response.send_message(embed = embed,
-                                                    ephemeral = True)
+        #     await interaction.response.send_message(embed = embed,
+        #                                             ephemeral = True)
             
             
         @self.tree.command(
@@ -641,35 +681,6 @@ class DiscordClient:
         #     await interaction.response.send_message(embed = embed,
         #                                             view = MyView())
         
-                            
-            
-        # Events
-        @self.client.event
-        async def on_ready() -> None:
-            self.logger.info(f"Logged as {self.client.user}")
-            #self.client.tree.clear_commands(guild = self.thalos_guild)
-            for command in await self.client.tree.sync(
-                    guild = self.thalos_guild):
-                self.logger.info(f'Command "{command.name}" synced to the app')
-            self.logger.info("Commands added")
-
-        @self.client.event
-        async def on_app_command_completion(
-                interaction: discord.Interaction,
-                command: Union[discord.app_commands.Command,
-                               discord.app_commands.ContextMenu]):
-            self.logger.info(
-                f'Command {command.name} has successfully completed')
-
-        @self.client.event
-        async def on_interaction(interaction: discord.Interaction):
-            if not interaction.command is None:
-                self.logger.info(
-                    f'Command {interaction.command.name}'
-                    + f' is called by {interaction.user}'
-                    + f' with these arguments :'
-                    + f' {interaction.namespace}')
-                
             
     #     @self.client.event
     #     async def on_message(message) -> None:
