@@ -601,7 +601,6 @@ class DiscordClient:
         self.helloasso_client: HelloAssoClient = helloasso_client
         self.gsheet_client: GoogleSheetsClient = gsheet_client
 
-        self.client = commands.Bot(command_prefix = '!', intents = self.intents)
         self.client = ThalosBot(
             command_prefix = '!', intents = self.intents)
 
