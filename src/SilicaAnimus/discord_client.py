@@ -429,7 +429,7 @@ async def info(interaction: discord.Interaction,
     Lance la procédure de mise à jour des adhérents sur le discord"""
     )
 async def update_member_list(interaction: discord.Interaction):
-    role = interaction.guild.get_role(1310285968393371770)
+    role = interaction.guild.get_role(678922012109963294)
     client = interaction.client
     parent = client.parent_client
     member_list = await parent.gsheet_client.get_members_by_discord_names(
