@@ -194,45 +194,53 @@ class CheckModal(discord.ui.Modal, title = 'Informations'):
 
 
 class UpdateMemberButtons(discord.ui.View):
-    def __init__(self, logger, embed, *args, **kwargs):
+    def __init__(self, logger, embed, role, data: dict, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.logger = logger
         self.embed = embed
+        self.data = data
+        self.role = role
                 
     @discord.ui.button(label = 'Afficher les membres masqués',
                        style = discord.ButtonStyle.primary,
                        disabled = True,
                        custom_id = 'display')
-    async def button_display(self, interaction, button):
+    async def button_display(self,
+                             interaction: discord.Interaction,
+                             button: discord.ui.Button):
         pass
                 
     @discord.ui.button(label = 'Confirmer',
                        style = discord.ButtonStyle.success,
                        disabled = False,
                        custom_id = 'confirm')
-    async def button_confirm(self, interaction, button):
+    async def button_confirm(self,
+                             interaction: discord.Interaction,
+                             button: discord.ui.Button):
         await interaction.response.defer()
-        for user in to_unmember:
+        for user in self.data['to_unmember']:
             user = interaction.guild.get_member_named(user)
-            await user.remove_roles(role)                        
+            await user.remove_roles(self.role)                        
             self.logger.info(
                 f'{user} is removed from the member list')
 
-        for user in to_member:
+        for user in self.data['to_member']:
             user = interaction.guild.get_member_named(user)
-            await user.add_roles(role)
+            await user.add_roles(self.role)
             self.logger.info(f'{user} is added to the member list')
 
         self.embed.description = 'Liste des membres mise à jour'
         self.embed.clear_fields()
-        await interaction.followup.send(embed = embed)
+        await interaction.followup.send(embed = self.embed)
 
                 
     @discord.ui.button(label = 'Annuler',
                        style = discord.ButtonStyle.danger,
                        disabled = False,
                        custom_id = 'cancel')
-    async def button_cancel(self, interaction, button):
+    async def button_cancel(self,
+                            interaction: discord.Interaction,
+                            button: discord.ui.Button):
         for item in self.children:
             item.disabled = True
             
@@ -526,7 +534,10 @@ async def update_member_list(interaction: discord.Interaction):
         inline = False)
 
                     
-    buttons = UpdateMemberButtons(logger = client.logger, embed = embed)
+    buttons = UpdateMemberButtons(logger = client.logger, embed = embed,
+                                  role = role,
+                                  data = {'to_member': to_member,
+                                          'to_unmember': to_unmember})
 
 
     await interaction.response.send_message(embed = embed,
