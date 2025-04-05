@@ -20,7 +20,7 @@ def typer_async(f):
 async def main() -> None:
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-    silica_animus = SilicaAnimus(discord_only = False)
+    silica_animus = SilicaAnimus(discord_only=False)
     await silica_animus.run()
 
 

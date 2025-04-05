@@ -8,7 +8,7 @@ from typing import List, Tuple, Union
 
 
 def normalize_name(name: str) -> str:
-    return name.strip("\"\' ").lower()
+    return name.strip("\"' ").lower()
 
 
 class HelloAssoClient:
@@ -140,6 +140,7 @@ class HelloAssoClient:
             + f'{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders'
             + "?pageSize=20"
             + "&withDetails=false"
+            + "&withCount=true"
         )
 
         if name_filter is not None:
@@ -190,10 +191,9 @@ class HelloAssoClient:
                         continue
 
                     user = item["user"]
-                    if (
-                        normalize_name(first_name) == normalize_name(user["firstName"])
-                        and normalize_name(last_name) == normalize_name(user["lastName"])
-                    ):
+                    if normalize_name(first_name) == normalize_name(
+                        user["firstName"]
+                    ) and normalize_name(last_name) == normalize_name(user["lastName"]):
                         self.logger.info(f"{first_name} {last_name} is a member")
                         return True
 
@@ -213,7 +213,9 @@ class HelloAssoClient:
              set[Tuple[str, str]]: List of first name, last name who are members
         """
 
-        normalize_names_list = list(map(lambda t: (normalize_name(t[0]), normalize_name(t[1])), names))
+        normalize_names_list = list(
+            map(lambda t: (normalize_name(t[0]), normalize_name(t[1])), names)
+        )
 
         if self.access_token is None:
             self.logger.warning("No token for get_membership request")
@@ -243,7 +245,10 @@ class HelloAssoClient:
                         ) in normalize_names_list:
                             return_set.add((user["firstName"], user["lastName"]))
 
-            if resp_data["pagination"]["totalCount"] == 0:
+            if (
+                resp_data["pagination"]["pageIndex"]
+                == resp_data["pagination"]["totalPages"]
+            ):
                 return return_set
 
             continuationToken = resp_data["pagination"]["continuationToken"]

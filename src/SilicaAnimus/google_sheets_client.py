@@ -30,8 +30,7 @@ class GoogleSheetsClient:
         self.logger = logging.getLogger(__name__)
 
         self.google_service = googleapiclient.discovery.build(
-            "sheets", "v4", credentials=self.credentials,
-            cache_discovery=False
+            "sheets", "v4", credentials=self.credentials, cache_discovery=False
         )
         self.sheets = self.google_service.spreadsheets()
         self.logger.info("Succesfully logged into Gsheet API")
@@ -83,9 +82,9 @@ class GoogleSheetsClient:
                 if len(values[row_index]) >= 3:
                     member_info.discord_nickname = values[row_index][2]
                 if len(values[row_index]) >= 4:
-                    member_info.member_last_year = values[row_index][3] == 'Oui'
+                    member_info.member_last_year = values[row_index][3] == "Oui"
                 if len(values[row_index]) >= 5:
-                    member_info.member_current_year = values[row_index][4] == 'Oui'
+                    member_info.member_current_year = values[row_index][4] == "Oui"
 
                 return member_info
 
@@ -119,11 +118,9 @@ class GoogleSheetsClient:
                 member_info.first_name = values[row_index][1]
                 member_info.server_nickname = values[row_index][2]
                 if len(values[row_index]) > 3:
-                    member_info.member_last_year = (
-                        values[row_index][3] == 'Oui')
+                    member_info.member_last_year = values[row_index][3] == "Oui"
                 if len(values[row_index]) > 4:
-                    member_info.member_current_year = (
-                        values[row_index][4] == 'Oui')
+                    member_info.member_current_year = values[row_index][4] == "Oui"
 
                 return member_info
 

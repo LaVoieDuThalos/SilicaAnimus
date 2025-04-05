@@ -8,7 +8,7 @@ from google_sheets_client import GoogleSheetsClient
 
 
 class SilicaAnimus:
-    def __init__(self, discord_only = False):
+    def __init__(self, discord_only=False):
         """_summary_
 
         Args:
@@ -25,7 +25,7 @@ class SilicaAnimus:
             )
         else:
             self.helloasso_client = self.gsheet_client = 0
-        
+
         self.discord_client = DiscordClient(
             getenv("DISCORD_TOKEN"),
             helloasso_client=self.helloasso_client,
