@@ -2,9 +2,9 @@ import logging
 import asyncio
 from os import getenv
 
-from discord_client import DiscordClient
-from helloasso_client import HelloAssoClient
-from google_sheets_client import GoogleSheetsClient
+from SilicaAnimus.helloasso_client import HelloAssoClient
+from SilicaAnimus.discord_client import DiscordClient
+from SilicaAnimus.google_sheets_client import GoogleSheetsClient
 
 
 class SilicaAnimus:

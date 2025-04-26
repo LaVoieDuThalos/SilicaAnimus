@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SilicaAnimus"
-version = "0.0.1"
+version = "0.1.0"
 description = "Le bot du serveur Discord de la voie du Thalos"
 
 readme = "README.md"
@@ -35,6 +35,6 @@ dependencies = [
 ]
 
 [project.scripts]
-sample = "SilicaAnimus:main.py"
+SilicaAnimus = "SilicaAnimus:main"
 
 [tool.setuptools]
