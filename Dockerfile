@@ -15,7 +15,7 @@ ENV PATH="/home/animus/venv/bin:$PATH"
 # install requirements
 COPY src src
 COPY README.md .
-RUN pip3 install --no-cache-dir --compile -e ./src -vvv
+RUN pip3 install --no-cache-dir --compile ./src -vvv
 
 FROM ubuntu:24.04 AS runner-image
 RUN apt-get update && apt-get install --no-install-recommends -y python3.12 python3-venv && \
@@ -40,4 +40,4 @@ ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/home/animus/venv
 ENV PATH="/home/animus/venv/bin:$PATH"
 
-CMD ["python3","SilicaAnimus/main.py"]
+CMD ["python3", "-m", "SilicaAnimus"]
