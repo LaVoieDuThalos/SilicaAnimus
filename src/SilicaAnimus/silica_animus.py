@@ -6,6 +6,8 @@ from SilicaAnimus.helloasso_client import HelloAssoClient
 from SilicaAnimus.discord_client import DiscordClient
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient
 
+__all__ = ["SilicaAnimus"]
+
 
 class SilicaAnimus:
     def __init__(self, discord_only=False):
