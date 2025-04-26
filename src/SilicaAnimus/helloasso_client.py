@@ -129,7 +129,7 @@ class HelloAssoClient:
         members_request_data = parse.urlencode(
             {
                 "organizationSlug": getenv("HELLOASSO_ORGANIZATIONSLUG"),
-                "formType": "membership",
+                "formType": "Membership",
                 "formSlug": getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG"),
             }
         )
@@ -143,8 +143,8 @@ class HelloAssoClient:
             + "&withCount=true"
         )
 
-        if name_filter is not None:
-            request_url += f"&userSearchKey={name_filter}"
+        # if name_filter is not None:
+        #     request_url += f"&userSearchKey={name_filter}"
 
         if continuationToken is not None:
             request_url += f"&continuationToken={continuationToken}"
@@ -180,26 +180,38 @@ class HelloAssoClient:
 
         self.logger.info("Getting members")
         resp: HTTPResponse
-        with request.urlopen(members_request) as resp:
-            if resp.status != 200:
-                self.logger.warning(f"Could not get members {resp.getcode()}")
+        while True:
+            with request.urlopen(members_request) as resp:
+                if resp.status != 200:
+                    self.logger.warning(f"Could not get members {resp.getcode()}")
 
-            resp_data = json.loads(resp.read())
-            for data in resp_data["data"]:
-                for item in data["items"]:
-                    if "user" not in item.keys():
-                        continue
+                resp_data = json.loads(resp.read())
+                for data in resp_data["data"]:
+                    for item in data["items"]:
+                        if "user" not in item.keys():
+                            continue
 
-                    user = item["user"]
-                    if normalize_name(first_name) == normalize_name(
-                        user["firstName"]
-                    ) and normalize_name(last_name) == normalize_name(user["lastName"]):
-                        self.logger.info(f"{first_name} {last_name} is a member")
-                        return True
+                        user = item["user"]
+                        if normalize_name(first_name) == normalize_name(
+                            user["firstName"]
+                        ) and normalize_name(last_name) == normalize_name(
+                            user["lastName"]
+                        ):
+                            self.logger.info(f"{first_name} {last_name} is a member")
+                            return True
 
-            self.logger.info(f"{first_name} {last_name} is not a member")
-            return False
+            if (
+                resp_data["pagination"]["pageIndex"]
+                == resp_data["pagination"]["totalPages"]
+            ):
+                return False
 
+            continuationToken = resp_data["pagination"]["continuationToken"]
+            members_request = self.make_membership_request(
+                continuationToken=continuationToken
+            )
+
+        self.logger.info(f"{first_name} {last_name} is not a member")
         return False
 
     async def get_memberships(

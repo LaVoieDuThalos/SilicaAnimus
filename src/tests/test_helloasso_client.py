@@ -75,9 +75,9 @@ async def test_helloasso_memberships_check() -> bool:
 
 
 if __name__ == "__main__":
-    # setup_function(test_helloasso_client_connection)
-    # asyncio.run(test_helloasso_client_connection())
-    # setup_function(test_helloasso_membership_check)
-    # asyncio.run(test_helloasso_membership_check())
+    setup_function(test_helloasso_client_connection)
+    asyncio.run(test_helloasso_client_connection())
+    setup_function(test_helloasso_membership_check)
+    asyncio.run(test_helloasso_membership_check())
     setup_function(test_helloasso_memberships_check)
     asyncio.run(test_helloasso_memberships_check())
