@@ -19,6 +19,20 @@ docker run -it --env-file .env silicaanimus:0.0.1
 
 # Utilisation et configuration des commandes de SilicaAnimus
 
+## Configuration des commandes A FAIRE AVANT LE PREMIER LANCEMENT DU BOT
+
+Les commandes sont par défaut utilisables par tout le monde et dans 
+tous les salons. Il faut donc faire attention à bien régler le champ
+d'utilisation de certaines commandes. Ces restrictions sont gérées par 
+un administrateur du serveur discord
+
+Aller dans les paramètres du serveur, puis `Integrations`, puis `Gerer` 
+(sur la ligne de votre bot). A partir de ce panneau, on peut
+régler des paramètres globaux d'utilisation du bot (utilisateurs et
+salons). Une fois ceci fait, on peut accorder des dérogations d'utilisation
+à certains utilisateurs ou groupes d'utilisateurs (roles) et également
+des dérogations de salons
+
 ## Manuel d'utilisation des commandes
 
 ### Commande : `ping`
