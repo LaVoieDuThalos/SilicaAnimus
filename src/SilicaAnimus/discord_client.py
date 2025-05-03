@@ -249,6 +249,7 @@ class UpdateMemberButtons(discord.ui.View):
     Envoie un signal à l'application et affiche le temps de latence
     """
 )
+@app_commands.guild_only()
 async def ping(interaction: discord.Interaction):
     client = interaction.client
     embed = MessageTemplate(
@@ -261,6 +262,7 @@ async def ping(interaction: discord.Interaction):
 @app_commands.command(description="L'application répète le message envoyé")
 @app_commands.describe(text="Texte à répéter")
 @app_commands.rename(text="texte")
+@app_commands.guild_only()
 async def echo(interaction: discord.Interaction, text: str):
     embed = MessageTemplate(
         description=text,
@@ -271,6 +273,7 @@ async def echo(interaction: discord.Interaction, text: str):
 @app_commands.command(description="Fais la listes des rôles que tu possèdes")
 @app_commands.describe(show="Envoyer la réponse en public ?")
 @app_commands.rename(show="montrer")
+@app_commands.guild_only()
 async def my_roles(interaction: discord.Interaction, show: bool = False):
     embed = MessageTemplate(
         title="Tu possèdes les rôles suivants : ",
@@ -288,6 +291,7 @@ async def my_roles(interaction: discord.Interaction, show: bool = False):
 )
 @app_commands.rename(role="rôle")
 @app_commands.describe(role="Role dont il faut lister les membres")
+@app_commands.guild_only()
 async def whois(
     interaction: discord.Interaction, role: discord.Role, show: bool = False
 ):
@@ -307,7 +311,7 @@ async def whois(
 
 
 @app_commands.context_menu(name="Epingler")
-@app_commands.checks.has_role("Administrateurs")
+@app_commands.guild_only()
 async def pin(interaction: discord.Interaction, message: discord.Message):
     try:
         await message.pin()
@@ -317,17 +321,16 @@ async def pin(interaction: discord.Interaction, message: discord.Message):
         await interaction.response.send_message(e, ephemeral=True)
 
 
-@app_commands.checks.has_role("Administrateurs")
 @app_commands.command(
     description=""" Vérifie si une personne est adhérente de l'association """
 )
+@app_commands.guild_only()
 async def check_member(interaction: discord.Interaction):
     modal = CheckModal()
     await interaction.response.send_modal(modal)
     await modal.wait()
 
 
-@app_commands.checks.has_role("Administrateurs")
 @app_commands.command(
     description="""
     Donne un rôle à tous les membres ayant le rôle fourni en paramètre
@@ -337,6 +340,7 @@ async def check_member(interaction: discord.Interaction):
     role_given="Rôle à donner",
     user_group="""Groupe d'utilisateurs recevant le nouveau rôle""",
 )
+@app_commands.guild_only()
 async def give_role(
     interaction: discord.Interaction,
     role_given: discord.Role,
@@ -373,6 +377,7 @@ async def give_role(
     description="""Ajoute le membre au groupe des
                       adhérents sur le discord"""
 )
+@app_commands.guild_only()
 async def make_membercheck(interaction: discord.Interaction):
     client = interaction.client
     embed = MessageTemplate(
@@ -382,8 +387,8 @@ async def make_membercheck(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, view=buttons)
 
 
-@app_commands.checks.has_any_role("Administrateurs", "Bureau")
 @app_commands.context_menu(name="Informations utilisateur")
+@app_commands.guild_only()
 async def info(interaction: discord.Interaction, member: discord.Member):
     client = interaction.client
     parent = client.parent_client
@@ -411,6 +416,7 @@ async def info(interaction: discord.Interaction, member: discord.Member):
     description="""
     Lance la procédure de mise à jour des adhérents sur le discord"""
 )
+@app_commands.guild_only()
 async def update_member_list(interaction: discord.Interaction):
     role = interaction.guild.get_role(678922012109963294)
     client = interaction.client
