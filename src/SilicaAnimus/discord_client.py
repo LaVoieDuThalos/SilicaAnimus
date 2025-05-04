@@ -34,11 +34,13 @@ class MemberProcessView(discord.ui.View):
     """
 
     def __init__(self, client, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(timeout=None, *args, **kwargs)
         self.client = client
 
     @discord.ui.button(
-        label="Demander le rôle de membre", style=discord.ButtonStyle.primary
+        label="Demander le rôle de membre",
+        style=discord.ButtonStyle.primary,
+        custom_id='get_membership_button',
     )
     async def button_get(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -129,9 +131,12 @@ class MemberProcessView(discord.ui.View):
 
             await membership.interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-    @discord.ui.button(label="Signaler un problème", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Signaler un problème",
+                       style=discord.ButtonStyle.danger,
+                       custom_id='report_problem_button')
     async def button_report(
-        self, interaction: discord.Interaction, button: discord.ui.Button
+            self, interaction: discord.Interaction,
+            button: discord.ui.Button,
     ):
         await interaction.response.send_message(
             "Contactez un administrateur", ephemeral=True
@@ -378,12 +383,16 @@ async def give_role(
                       adhérents sur le discord"""
 )
 @app_commands.guild_only()
-async def make_membercheck(interaction: discord.Interaction):
+async def make_membercheck(interaction: discord.Interaction,
+                           text: str=""):
+    # remove escaping newlines
+    text = '\n'.join(text.split('\\n'))
     client = interaction.client
     embed = MessageTemplate(
-        title="Obtenir votre role de membre sur le discord", description=""
+        title="Obtenir votre role de membre sur le discord",
+        description=text
     )
-    buttons = MemberProcessView(timeout=None, client=client.parent_client)
+    buttons = MemberProcessView(client=client.parent_client)
     await interaction.response.send_message(embed=embed, view=buttons)
 
 
@@ -545,6 +554,8 @@ class ThalosBot(commands.Bot):
         ]
         for command in commands:
             self.tree.add_command(command, guild=self.thalos_guild)
+        self.add_view(MemberProcessView(self.parent_client))
+        self.logger.info('Persistent view added to client')
 
     async def on_ready(self) -> None:
         self.logger.info(f"Logged as {self.user}")
