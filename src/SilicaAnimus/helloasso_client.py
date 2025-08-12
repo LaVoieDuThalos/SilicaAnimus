@@ -1,5 +1,6 @@
 import logging
 from urllib import request, parse
+from urllib.error import URLError, HTTPError
 from os import getenv
 from http.client import HTTPResponse
 import json
