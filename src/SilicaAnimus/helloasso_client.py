@@ -73,10 +73,10 @@ class HelloAssoClient:
             self.refresh_token = resp_values["refresh_token"]
             self.token_expiration_time = resp_values["expires_in"]
 
-            self.refresh_token_handle = asyncio.get_running_loop().call_later(
-                self.token_expiration_time - 60, self.refresh_access_token
+            asyncio.get_running_loop().call_later(
+              self.token_expiration_time - 60,
+              lambda: asyncio.create_task(self.refresh_access_token())
             )
-
         self.logger.info("Token gotten succesfully")
         return True
 
