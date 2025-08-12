@@ -73,10 +73,10 @@ class HelloAssoClient:
             self.refresh_token = resp_values["refresh_token"]
             self.token_expiration_time = resp_values["expires_in"]
 
-            asyncio.get_running_loop().call_later(
-              self.token_expiration_time - 60,
-              lambda: asyncio.create_task(self.refresh_access_token())
+            self.refresh_token_handle = asyncio.get_running_loop().call_later(
+                self.token_expiration_time - 60, self.refresh_access_token
             )
+
         self.logger.info("Token gotten succesfully")
         return True
 
@@ -86,7 +86,6 @@ class HelloAssoClient:
         Returns:
             bool: True if it managed to refresh the token
         """
-
         self.logger.info("Refreshing token")
         token_request_data = parse.urlencode(
             {
@@ -104,22 +103,36 @@ class HelloAssoClient:
         )
         token_request.add_header("Content-Type", "application/x-www-form-urlencoded")
 
-        resp: HTTPResponse
-        with request.urlopen(token_request) as resp:
-            if resp.status != 200:
-                self.logger.warning(f"Could not get token {resp.getcode()}")
+        try:
+          resp: HTTPResponse
+          with request.urlopen(token_request) as resp:
+              if resp.status != 200:
+                  self.logger.warning(f"Could not get token {resp.getcode()}")
 
-            resp_values = json.loads(resp.read())
-            self.access_token = resp_values["access_token"]
-            self.refresh_token = resp_values["refresh_token"]
-            self.token_expiration_time = resp_values["expires_in"]
+              resp_values = json.loads(resp.read())
+              self.access_token = resp_values["access_token"]
+              self.refresh_token = resp_values["refresh_token"]
+              self.token_expiration_time = resp_values["expires_in"]
 
-            self.refresh_token_handle = asyncio.get_event_loop().call_later(
-                self.token_expiration_time - 60, self.refresh_access_token
-            )
+              self.refresh_token_handle = asyncio.get_event_loop().call_later(
+                  self.token_expiration_time - 60, self.refresh_access_token
+              )
 
-        self.logger.info("Access token refreshed")
-        return True
+          self.logger.info("Access token refreshed")
+          return True
+        except HTTPError as e:
+          self.logger.error(f"HTTP error during token refresh: {e.code} {e.reason}")
+        except URLError as e:
+          self.logger.error(f"Network error during token refresh: {e.reason}")
+        except Exception as e:
+          self.logger.exception(f"Unexpected error during token refresh: {e}")
+
+        # En cas d'échec, replanifie une tentative après 60s
+        self.logger.info("Retrying token refresh in 60 seconds...")
+        self.refresh_token_handle = asyncio.get_event_loop().call_later(
+            60, self.refresh_access_token
+        )
+        return False
 
     def make_membership_request(
         self,
