@@ -423,6 +423,59 @@ async def info(interaction: discord.Interaction, member: discord.Member):
 
 @app_commands.command(
     description="""
+    Met à jour le tableur liant les adhérents avec leur compte discord"""
+)
+@app_commands.guild_only()
+async def update_data_table(interaction: discord.Interaction):
+    """ This command update the google table to get members not
+    registered yet"""
+    
+    parent = interaction.client.parent_client
+    await interaction.response.defer(ephemeral = True)
+
+    # Get the whole table to loop on
+    data = await parent.gsheet_client.get_spreadsheet()
+    if data is None:
+        return None
+
+    values = data.get('values', [])
+
+    # Make the list of names
+    names = [(first_name, last_name)
+             for last_name, first_name, *others in values
+             if first_name != 'Nom' or last_name != 'Prénom']
+
+    # filter to get only members
+    members = await parent.helloasso_client.get_memberships(names)
+
+
+    # Update member info for each members found
+    member_list = []
+    for first_name, last_name in members:
+        await asyncio.sleep(0.05)
+        m_info = await parent.gsheet_client.get_member_by_name(
+            first_name, last_name)
+        m_info.member_current_year = True
+        member_list.append(m_info)
+
+    await parent.gsheet_client.add_members(member_list)
+
+    embed = MessageTemplate(
+        title="Mise à jour du tableur adhérents google",
+        description = "Tableur mis à jour")
+    await interaction.followup.send(embed = embed)
+
+
+
+
+            
+
+
+
+          
+    
+@app_commands.command(
+    description="""
     Lance la procédure de mise à jour des adhérents sur le discord"""
 )
 @app_commands.guild_only()
@@ -551,6 +604,7 @@ class ThalosBot(commands.Bot):
             make_membercheck,
             info,
             update_member_list,
+            update_data_table,
         ]
         for command in commands:
             self.tree.add_command(command, guild=self.thalos_guild)
@@ -559,6 +613,7 @@ class ThalosBot(commands.Bot):
 
     async def on_ready(self) -> None:
         self.logger.info(f"Logged as {self.user}")
+
         # self.client.tree.clear_commands(guild=self.thalos_guild)
         for command in await self.tree.sync(guild=self.thalos_guild):
             self.logger.info(f'Command "{command.name}" synced to the app')
