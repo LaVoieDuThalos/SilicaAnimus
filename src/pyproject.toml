@@ -31,10 +31,23 @@ dependencies = [
   "pytest",
   "pytest-asyncio",
   "pre-commit",
-  "google-api-python-client"
+  "google-api-python-client",
+  "unidecode>=1.4.0",
+  "black>=24.8.0",
 ]
 
 [project.scripts]
 SilicaAnimus = "SilicaAnimus:main"
 
 [tool.setuptools]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
+test = [
+    "pytest>=8.3.5",
+]

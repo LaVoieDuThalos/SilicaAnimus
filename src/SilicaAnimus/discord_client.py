@@ -40,7 +40,7 @@ class MemberProcessView(discord.ui.View):
     @discord.ui.button(
         label="Demander le rôle de membre",
         style=discord.ButtonStyle.primary,
-        custom_id='get_membership_button',
+        custom_id="get_membership_button",
     )
     async def button_get(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -131,12 +131,15 @@ class MemberProcessView(discord.ui.View):
 
             await membership.interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
-    @discord.ui.button(label="Signaler un problème",
-                       style=discord.ButtonStyle.danger,
-                       custom_id='report_problem_button')
+    @discord.ui.button(
+        label="Signaler un problème",
+        style=discord.ButtonStyle.danger,
+        custom_id="report_problem_button",
+    )
     async def button_report(
-            self, interaction: discord.Interaction,
-            button: discord.ui.Button,
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
     ):
         await interaction.response.send_message(
             "Contactez un administrateur", ephemeral=True
@@ -383,14 +386,12 @@ async def give_role(
                       adhérents sur le discord"""
 )
 @app_commands.guild_only()
-async def make_membercheck(interaction: discord.Interaction,
-                           text: str=""):
+async def make_membercheck(interaction: discord.Interaction, text: str = ""):
     # remove escaping newlines
-    text = '\n'.join(text.split('\\n'))
+    text = "\n".join(text.split("\\n"))
     client = interaction.client
     embed = MessageTemplate(
-        title="Obtenir votre role de membre sur le discord",
-        description=text
+        title="Obtenir votre role de membre sur le discord", description=text
     )
     buttons = MemberProcessView(client=client.parent_client)
     await interaction.response.send_message(embed=embed, view=buttons)
@@ -427,34 +428,34 @@ async def info(interaction: discord.Interaction, member: discord.Member):
 )
 @app_commands.guild_only()
 async def update_data_table(interaction: discord.Interaction):
-    """ This command update the google table to get members not
+    """This command update the google table to get members not
     registered yet"""
-    
+
     parent = interaction.client.parent_client
-    await interaction.response.defer(ephemeral = True)
+    await interaction.response.defer(ephemeral=True)
 
     # Get the whole table to loop on
     data = await parent.gsheet_client.get_spreadsheet()
     if data is None:
         return None
 
-    values = data.get('values', [])
+    values = data.get("values", [])
 
     # Make the list of names
-    names = [(first_name, last_name)
-             for last_name, first_name, *others in values
-             if first_name != 'Nom' or last_name != 'Prénom']
+    names = [
+        (first_name, last_name)
+        for last_name, first_name, *others in values
+        if first_name != "Nom" or last_name != "Prénom"
+    ]
 
     # filter to get only members
     members = await parent.helloasso_client.get_memberships(names)
-
 
     # Update member info for each members found
     member_list = []
     for first_name, last_name in members:
         await asyncio.sleep(0.05)
-        m_info = await parent.gsheet_client.get_member_by_name(
-            first_name, last_name)
+        m_info = await parent.gsheet_client.get_member_by_name(first_name, last_name)
         m_info.member_current_year = True
         member_list.append(m_info)
 
@@ -462,18 +463,11 @@ async def update_data_table(interaction: discord.Interaction):
 
     embed = MessageTemplate(
         title="Mise à jour du tableur adhérents google",
-        description = "Tableur mis à jour")
-    await interaction.followup.send(embed = embed)
+        description="Tableur mis à jour",
+    )
+    await interaction.followup.send(embed=embed)
 
 
-
-
-            
-
-
-
-          
-    
 @app_commands.command(
     description="""
     Lance la procédure de mise à jour des adhérents sur le discord"""
@@ -609,7 +603,7 @@ class ThalosBot(commands.Bot):
         for command in commands:
             self.tree.add_command(command, guild=self.thalos_guild)
         self.add_view(MemberProcessView(self.parent_client))
-        self.logger.info('Persistent view added to client')
+        self.logger.info("Persistent view added to client")
 
     async def on_ready(self) -> None:
         self.logger.info(f"Logged as {self.user}")

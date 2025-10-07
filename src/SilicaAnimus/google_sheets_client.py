@@ -3,7 +3,7 @@ from os import getenv
 from google.oauth2 import service_account
 import googleapiclient.discovery
 from googleapiclient.errors import HttpError
-
+from SilicaAnimus.utils import normalize_name
 from dataclasses import dataclass
 import logging
 
@@ -74,8 +74,13 @@ class GoogleSheetsClient:
         member_info = MemberInfo(first_name=first_name, last_name=last_name)
 
         for row_index in range(len(values)):
-            lowered_names = list(map(lambda s: s.lower(), values[row_index][:2]))
-            if lowered_names == [last_name.lower(), first_name.lower()]:
+            normalized_names = list(
+                map(lambda s: normalize_name(s), values[row_index][:2])
+            )
+            if normalized_names == [
+                normalize_name(last_name),
+                normalize_name(first_name),
+            ]:
                 member_info.in_spreadsheet = True
                 # if len(values) >= 3:
                 #     member_info.server_nickname = values[row_index][2]
@@ -112,7 +117,7 @@ class GoogleSheetsClient:
             if len(values[row_index]) < 3:
                 continue
 
-            if values[row_index][2].lower() == discord_name:
+            if normalize_name(values[row_index][2]) == discord_name:
                 member_info.in_spreadsheet = True
                 member_info.last_name = values[row_index][0]
                 member_info.first_name = values[row_index][1]
@@ -199,10 +204,12 @@ class GoogleSheetsClient:
         }
 
         for row_index in range(len(values)):
-            lowered_names = list(map(lambda s: s.lower(), values[row_index][:2]))
-            if lowered_names == [
-                member_info.last_name.lower(),
-                member_info.first_name.lower(),
+            normalized_names = list(
+                map(lambda s: normalize_name(s), values[row_index][:2])
+            )
+            if normalized_names == [
+                normalize_name(member_info.last_name),
+                normalize_name(member_info.first_name),
             ]:
                 member_sheet_row = row_index + 1
                 break
@@ -259,7 +266,10 @@ class GoogleSheetsClient:
         values = ss.get("values", [])
 
         insert_values = {
-            (member_info.first_name.lower(), member_info.last_name.lower()): [
+            (
+                normalize_name(member_info.first_name),
+                normalize_name(member_info.last_name),
+            ): [
                 member_info.last_name,
                 member_info.first_name,
                 member_info.discord_nickname,
@@ -269,13 +279,18 @@ class GoogleSheetsClient:
             for member_info in members_info
         }
 
-        names_list = [(value[1].lower(), value[0].lower()) for value in values]
+        names_list = [
+            (normalize_name(value[1]), normalize_name(value[0])) for value in values
+        ]
 
         update_data = []
         append_data = []
 
         for member_info in members_info:
-            name_tuple = (member_info.first_name.lower(), member_info.last_name.lower())
+            name_tuple = (
+                normalize_name(member_info.first_name),
+                normalize_name(member_info.last_name),
+            )
             if names_list.count(name_tuple) > 0:
                 member_sheet_row = names_list.index(name_tuple) + 1
                 update_data.append(
