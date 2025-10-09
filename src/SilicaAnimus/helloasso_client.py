@@ -7,7 +7,7 @@ import json
 import asyncio
 from typing import List, Tuple, Union
 
-from utils import normalize_name
+from SilicaAnimus.utils import normalize_name
 
 
 class HelloAssoClient:
