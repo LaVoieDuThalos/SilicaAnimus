@@ -2,10 +2,12 @@ import logging
 import asyncio
 from typing import Union
 from dotenv import load_dotenv
+from datetime import datetime, time
+from os import getenv
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from SilicaAnimus.helloasso_client import HelloAssoClient
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
@@ -585,6 +587,40 @@ async def update_member_list(interaction: discord.Interaction):
 
 
 class ThalosBot(commands.Bot):
+    @tasks.loop(time=time(hour=22, minute=0))
+    async def weekly_message(self):
+        """Send a weekly message every Friday at 10pm"""
+        # Check if today is Friday (weekday 4)
+        if datetime.now().weekday() != 4:
+            return
+
+        thread_id = getenv("WEEKLY_MESSAGE_THREAD_ID")
+        message_content = getenv("WEEKLY_MESSAGE_CONTENT")
+
+        if not thread_id or not message_content:
+            self.logger.warning(
+                "WEEKLY_MESSAGE_THREAD_ID or WEEKLY_MESSAGE_CONTENT not set in .env"
+            )
+            return
+
+        try:
+            thread = self.get_channel(int(thread_id))
+            if thread is None:
+                thread = await self.fetch_channel(int(thread_id))
+
+            if thread:
+                await thread.send(message_content)
+                self.logger.info(f"Weekly message sent to thread {thread_id}")
+            else:
+                self.logger.error(f"Thread {thread_id} not found")
+        except Exception as e:
+            self.logger.error(f"Error sending weekly message: {e}", exc_info=True)
+
+    @weekly_message.before_loop
+    async def before_weekly_message(self):
+        """Wait until the bot is ready before starting the task"""
+        await self.wait_until_ready()
+
     async def setup_hook(self):
         self.logger.info("Running setup hook")
         commands = [
@@ -604,6 +640,11 @@ class ThalosBot(commands.Bot):
             self.tree.add_command(command, guild=self.thalos_guild)
         self.add_view(MemberProcessView(self.parent_client))
         self.logger.info("Persistent view added to client")
+
+        # Start scheduled tasks
+        if not self.weekly_message.is_running():
+            self.weekly_message.start()
+            self.logger.info("Weekly message task started")
 
     async def on_ready(self) -> None:
         self.logger.info(f"Logged as {self.user}")

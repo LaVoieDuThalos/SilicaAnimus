@@ -231,5 +231,25 @@ Des boutons pour confirmer ou annuler l'action sont également affichés.
 
 ---
 
+### Tâche planifiée : Message hebdomadaire automatique
+**Description :**
+Le bot envoie automatiquement un message chaque vendredi à 22h00 dans un thread spécifique.
+
+**Configuration :**
+Dans le fichier `.env`, configurez :
+- **WEEKLY_MESSAGE_THREAD_ID** : L'ID du thread Discord où envoyer le message
+- **WEEKLY_MESSAGE_CONTENT** : Le contenu du message à envoyer
+
+**Exemple de configuration :**
+```
+WEEKLY_MESSAGE_THREAD_ID=1213241665524076544
+WEEKLY_MESSAGE_CONTENT=Votre message hebdomadaire ici
+```
+
+**Fonctionnement :**
+Le bot vérifie tous les jours à 22h00 si nous sommes vendredi. Si oui, il envoie le message configuré dans le thread spécifié.
+
+---
+
 *Cette documentation est conçue pour le bot Discord de La Voie du Thalos.*
 ```
