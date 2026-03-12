@@ -38,9 +38,14 @@ class TestWeeklyMessage:
             mock_channel = AsyncMock()
             bot.get_channel = Mock(return_value=mock_channel)
 
-            # Mock datetime to return Friday (weekday 4)
+            # Mock datetime to return Friday (weekday 4) at 22:00
             with patch("SilicaAnimus.discord_client.datetime") as mock_datetime:
-                mock_datetime.now.return_value = Mock(weekday=Mock(return_value=4))
+                mock_now = Mock()
+                mock_now.weekday.return_value = 4
+                mock_now.hour = 22
+                mock_now.minute = 0
+                mock_now.date.return_value = Mock()
+                mock_datetime.now.return_value = mock_now
 
                 # Run the weekly_message task
                 await bot.weekly_message()
@@ -94,13 +99,16 @@ class TestWeeklyMessage:
             mock_channel = AsyncMock()
             bot.get_channel = Mock(return_value=mock_channel)
 
-            # Test each configured weekday
+            # Test each configured weekday (use default time 22:00)
             for weekday in [4, 5, 6]:
                 mock_channel.reset_mock()
                 with patch("SilicaAnimus.discord_client.datetime") as mock_datetime:
-                    mock_datetime.now.return_value = Mock(
-                        weekday=Mock(return_value=weekday)
-                    )
+                    mock_now = Mock()
+                    mock_now.weekday.return_value = weekday
+                    mock_now.hour = 22
+                    mock_now.minute = 0
+                    mock_now.date.return_value = Mock()
+                    mock_datetime.now.return_value = mock_now
                     await bot.weekly_message()
                     mock_channel.send.assert_called_once_with("Weekend message")
 
@@ -146,7 +154,12 @@ class TestWeeklyMessage:
             bot.fetch_channel = AsyncMock(return_value=mock_channel)
 
             with patch("SilicaAnimus.discord_client.datetime") as mock_datetime:
-                mock_datetime.now.return_value = Mock(weekday=Mock(return_value=4))
+                mock_now = Mock()
+                mock_now.weekday.return_value = 4
+                mock_now.hour = 22
+                mock_now.minute = 0
+                mock_now.date.return_value = Mock()
+                mock_datetime.now.return_value = mock_now
 
                 await bot.weekly_message()
 

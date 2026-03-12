@@ -24,6 +24,7 @@ async def test_helloasso_client_connection():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="Requires valid HelloAsso API data and member exists")
 async def test_helloasso_membership_check():
     """Test membership verification for individual members"""
     client = HelloAssoClient(
@@ -51,6 +52,7 @@ async def test_helloasso_membership_check():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="Requires valid HelloAsso API data and members exist")
 async def test_helloasso_memberships_check():
     """Test batch membership verification"""
     client = HelloAssoClient(
