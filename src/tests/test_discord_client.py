@@ -1,22 +1,18 @@
-from os import getenv
-from dotenv import load_dotenv
 import pytest
 import asyncio
-import logging
-import sys
+from os import getenv
+from dotenv import load_dotenv
 
 from SilicaAnimus.discord_client import DiscordClient
 
 pytest_plugins = ("pytest_asyncio",)
 
-
-def setup_function(function):
-    load_dotenv()
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+load_dotenv()
 
 
 @pytest.mark.asyncio
-async def test_discord_client_connection() -> bool:
+async def test_discord_client_connection():
+    """Test that Discord client can connect and disconnect properly"""
     client = DiscordClient(
         getenv("DISCORD_TOKEN"), helloasso_client=None, gsheet_client=None
     )
@@ -24,9 +20,3 @@ async def test_discord_client_connection() -> bool:
     await asyncio.sleep(5)
     await client.close()
     await future
-    return True
-
-
-if __name__ == "__main__":
-    setup_function(test_discord_client_connection)
-    asyncio.run(test_discord_client_connection())

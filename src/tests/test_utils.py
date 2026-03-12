@@ -1,25 +1,28 @@
-from dotenv import load_dotenv
-import logging
-import sys
-
 from SilicaAnimus import utils
 
 
-def setup_function(function):
-    load_dotenv()
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+class TestUtils:
+    """Test suite for utility functions"""
 
+    def test_normalize_name_basic(self):
+        """Test basic normalization"""
+        assert utils.normalize_name("test") == "test"
 
-def test_normalize_name() -> bool:
-    assert utils.normalize_name("test") == "test"
-    assert utils.normalize_name("tést") == "test"
-    assert utils.normalize_name("tèst") == "test"
-    assert utils.normalize_name("têst") == "test"
-    assert utils.normalize_name("Test") == "test"
-    assert utils.normalize_name("tàst") == "tast"
-    assert utils.normalize_name("tæst") == "taest"
-    assert utils.normalize_name("'test'") == "test"
+    def test_normalize_name_accents(self):
+        """Test accent removal"""
+        assert utils.normalize_name("tést") == "test"
+        assert utils.normalize_name("tèst") == "test"
+        assert utils.normalize_name("têst") == "test"
+        assert utils.normalize_name("tàst") == "tast"
 
+    def test_normalize_name_case(self):
+        """Test case conversion"""
+        assert utils.normalize_name("Test") == "test"
+        assert utils.normalize_name("TEST") == "test"
 
-if __name__ == "__main__":
-    test_normalize_name()
+    def test_normalize_name_special_chars(self):
+        """Test special character handling"""
+        assert utils.normalize_name("tæst") == "taest"
+        assert utils.normalize_name("'test'") == "test"
+        assert utils.normalize_name('"test"') == "test"
+        assert utils.normalize_name(" test ") == "test"
