@@ -163,3 +163,13 @@ cython_debug/
 .vscode/*
 client_secrets.json
 thalosdiscordbot-eb19ad40416e.json
+
+# Google service account files
+*.json:Zone.Identifier
+silicaanimus-*.json
+
+# IDE
+.idea/
+
+# UV lock files in src
+src/uv.lock
