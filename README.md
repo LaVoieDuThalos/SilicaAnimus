@@ -233,21 +233,27 @@ Des boutons pour confirmer ou annuler l'action sont également affichés.
 
 ### Tâche planifiée : Message hebdomadaire automatique
 **Description :**
-Le bot envoie automatiquement un message chaque vendredi à 22h00 dans un thread spécifique.
+Le bot envoie automatiquement un message à l'heure configurée les jours configurés dans un thread spécifique.
 
 **Configuration :**
 Dans le fichier `.env`, configurez :
 - **WEEKLY_MESSAGE_THREAD_ID** : L'ID du thread Discord où envoyer le message
 - **WEEKLY_MESSAGE_CONTENT** : Le contenu du message à envoyer
+- **WEEKLY_MESSAGE_WEEKDAYS** : Jours de la semaine (0=Lundi, 1=Mardi, 2=Mercredi, 3=Jeudi, 4=Vendredi, 5=Samedi, 6=Dimanche)
+- **WEEKLY_MESSAGE_HOUR** : Heure d'envoi (format 24h, par défaut 22)
+- **WEEKLY_MESSAGE_MINUTE** : Minute d'envoi (par défaut 0)
 
 **Exemple de configuration :**
 ```
 WEEKLY_MESSAGE_THREAD_ID=1213241665524076544
 WEEKLY_MESSAGE_CONTENT=Votre message hebdomadaire ici
+WEEKLY_MESSAGE_WEEKDAYS=4,5
+WEEKLY_MESSAGE_HOUR=22
+WEEKLY_MESSAGE_MINUTE=0
 ```
 
 **Fonctionnement :**
-Le bot vérifie tous les jours à 22h00 si nous sommes vendredi. Si oui, il envoie le message configuré dans le thread spécifié.
+Le bot vérifie à l'heure configurée si nous sommes un des jours configurés (par défaut vendredi et samedi à 22h00). Si oui, il envoie le message configuré dans le thread spécifié.
 
 ---
 

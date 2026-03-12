@@ -2,7 +2,7 @@ import logging
 import asyncio
 from typing import Union
 from dotenv import load_dotenv
-from datetime import datetime, time
+from datetime import datetime
 from os import getenv
 
 import discord
@@ -587,15 +587,51 @@ async def update_member_list(interaction: discord.Interaction):
 
 
 class ThalosBot(commands.Bot):
-    @tasks.loop(time=time(hour=22, minute=0))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._last_message_time = None  # Track last message sent to avoid duplicates
+
+    @tasks.loop(minutes=1)
     async def weekly_message(self):
-        """Send a weekly message every Friday at 10pm"""
-        # Check if today is Friday (weekday 4)
-        if datetime.now().weekday() != 4:
+        """Check every minute if we should send the scheduled message"""
+        now = datetime.now()
+
+        # Get configured time
+        hour = int(getenv("WEEKLY_MESSAGE_HOUR", "22"))
+        minute = int(getenv("WEEKLY_MESSAGE_MINUTE", "0"))
+
+        # Check if we're at the right time (within the current minute)
+        if now.hour != hour or now.minute != minute:
+            return
+
+        # Avoid sending duplicate messages in the same minute
+        current_time_key = f"{now.date()}-{hour}:{minute}"
+        if self._last_message_time == current_time_key:
+            return
+        self._last_message_time = current_time_key
+
+        self.logger.info("weekly_message task triggered at correct time")
+
+        # Get configured weekdays (default: Friday,Saturday = 4,5)
+        weekdays_str = getenv("WEEKLY_MESSAGE_WEEKDAYS", "4,5")
+        try:
+            allowed_weekdays = [int(day.strip()) for day in weekdays_str.split(",")]
+        except ValueError:
+            self.logger.error(f"Invalid WEEKLY_MESSAGE_WEEKDAYS format: {weekdays_str}")
+            return
+
+        # Check if today is one of the configured weekdays
+        current_weekday = now.weekday()
+        self.logger.info(f"Current weekday: {current_weekday}, allowed: {allowed_weekdays}")
+
+        if current_weekday not in allowed_weekdays:
+            self.logger.info(f"Skipping message - today ({current_weekday}) not in allowed days {allowed_weekdays}")
             return
 
         thread_id = getenv("WEEKLY_MESSAGE_THREAD_ID")
         message_content = getenv("WEEKLY_MESSAGE_CONTENT")
+
+        self.logger.info(f"Thread ID: {thread_id}, Message: {message_content}")
 
         if not thread_id or not message_content:
             self.logger.warning(
@@ -605,12 +641,17 @@ class ThalosBot(commands.Bot):
 
         try:
             thread = self.get_channel(int(thread_id))
+            self.logger.info(f"get_channel result: {thread}")
+
             if thread is None:
+                self.logger.info("Trying fetch_channel...")
                 thread = await self.fetch_channel(int(thread_id))
+                self.logger.info(f"fetch_channel result: {thread}")
 
             if thread:
+                self.logger.info(f"Sending message to {thread.name}...")
                 await thread.send(message_content)
-                self.logger.info(f"Weekly message sent to thread {thread_id}")
+                self.logger.info(f"✅ Weekly message sent to thread {thread_id}")
             else:
                 self.logger.error(f"Thread {thread_id} not found")
         except Exception as e:
