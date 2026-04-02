@@ -208,10 +208,21 @@ class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
         )
 
         if member_info.in_spreadsheet and member_info.discord_nickname:
-            description = (
-                f"{self.prenom.value} {self.nom.value} "
-                f"est associé au compte Discord : {member_info.discord_nickname}"
+            guild_member = interaction.guild.get_member_named(
+                member_info.discord_nickname
             )
+            if guild_member:
+                description = (
+                    f"{self.prenom.value} {self.nom.value} "
+                    f"est associé au compte Discord : {guild_member.name}"
+                    f" (pseudo sur le serveur : {guild_member.display_name})"
+                )
+            else:
+                description = (
+                    f"{self.prenom.value} {self.nom.value} "
+                    f"est associé au pseudo Discord : {member_info.discord_nickname}"
+                    " (introuvable sur le serveur)"
+                )
         elif member_info.in_spreadsheet:
             description = (
                 f"{self.prenom.value} {self.nom.value} "

@@ -13,9 +13,10 @@ RUN python3 -m venv /home/animus/venv
 ENV PATH="/home/animus/venv/bin:$PATH"
 
 # install requirements
-COPY src src
+COPY pyproject.toml .
 COPY README.md .
-RUN pip3 install --no-cache-dir --compile ./src -vvv
+COPY src src
+RUN pip3 install --no-cache-dir --compile . -vvv
 
 FROM ubuntu:24.04 AS runner-image
 RUN apt-get update && apt-get install --no-install-recommends -y python3.12 python3-venv && \

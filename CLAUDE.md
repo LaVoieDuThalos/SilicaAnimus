@@ -8,27 +8,26 @@ SilicaAnimus is a Discord bot for the "La Voie du Thalos" association. It manage
 
 ## Commands
 
-All commands run from within the `src/` directory. The project uses a local virtualenv at `src/.venv/`.
+All commands run from the project root. The project uses a local virtualenv at `.venv/`.
 
 **Setup:**
 ```bash
-cd src
-pip install -e .
+uv sync
 ```
 
 **Run the bot:**
 ```bash
-cd src && python -m SilicaAnimus
+uv run python -m SilicaAnimus
 ```
 
 **Run all tests:**
 ```bash
-cd src && pytest
+uv run pytest
 ```
 
 **Run a single test:**
 ```bash
-cd src && pytest tests/test_file.py::test_function_name
+uv run pytest src/tests/test_file.py::test_function_name
 ```
 
 **Linting (via pre-commit):**

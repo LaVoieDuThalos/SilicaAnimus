@@ -1,12 +1,29 @@
 # Installation de SilicaAnimus
 Le bot du Discord de la Voie du Thalos
 
+## Développement
+
+**Installation des dépendances :**
+```bash
+uv sync
+```
+
+**Lancer le bot :**
+```bash
+uv run python -m SilicaAnimus
+```
+
+**Lancer les tests :**
+```bash
+uv run pytest
+```
+
 ## Build docker image
 
 Pour construire l'image Docker du Bot :
 
 ```bash
-docker buildx build --platform linux/arm64/v8,linux/amd64 -t silicananimus:0.0.2 --load .
+docker buildx build --platform linux/arm64/v8,linux/amd64 -t silicaanimus:0.0.2 --load .
 ```
 
 ## Démarrage de l'image Docker
@@ -14,7 +31,7 @@ docker buildx build --platform linux/arm64/v8,linux/amd64 -t silicananimus:0.0.2
 Pour démarrer l'image Docker du bot avec le fichier .env :
 
 ```bash
-docker run -it --env-file .env silicaanimus:0.0.1
+docker run -it --env-file .env silicaanimus:0.0.2
 ```
 
 # Utilisation et configuration des commandes de SilicaAnimus
