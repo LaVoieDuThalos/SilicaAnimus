@@ -193,6 +193,40 @@ class CheckModal(discord.ui.Modal, title="Informations"):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
+    """
+    Look up the Discord username of a member by their real name
+    """
+
+    prenom = discord.ui.TextInput(label="Prénom", placeholder="Paul")
+    nom = discord.ui.TextInput(label="Nom", placeholder="Bismuth")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        gsheet_client = interaction.client.parent_client.gsheet_client
+        member_info = await gsheet_client.get_member_by_name(
+            first_name=self.prenom.value, last_name=self.nom.value
+        )
+
+        if member_info.in_spreadsheet and member_info.discord_nickname:
+            description = (
+                f"{self.prenom.value} {self.nom.value} "
+                f"est associé au compte Discord : {member_info.discord_nickname}"
+            )
+        elif member_info.in_spreadsheet:
+            description = (
+                f"{self.prenom.value} {self.nom.value} "
+                "est dans le tableur mais n'a pas de compte Discord associé"
+            )
+        else:
+            description = (
+                f"{self.prenom.value} {self.nom.value} "
+                "n'a pas été trouvé dans le tableur"
+            )
+
+        embed = MessageTemplate(title="Pseudo Discord :", description=description)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 class UpdateMemberButtons(discord.ui.View):
     def __init__(self, logger, embed, role, data: dict, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -337,6 +371,28 @@ async def pin(interaction: discord.Interaction, message: discord.Message):
 @app_commands.guild_only()
 async def check_member(interaction: discord.Interaction):
     modal = CheckModal()
+    await interaction.response.send_modal(modal)
+    await modal.wait()
+
+
+async def _bureau_or_admin_predicate(interaction: discord.Interaction) -> bool:
+    admin_role_id = int(getenv("ADMIN_ROLE_ID", 0))
+    bureau_role_id = int(getenv("BUREAU_ROLE_ID", 0))
+    role_ids = {role.id for role in interaction.user.roles}
+    return admin_role_id in role_ids or bureau_role_id in role_ids
+
+
+def bureau_or_admin_only():
+    return app_commands.check(_bureau_or_admin_predicate)
+
+
+@app_commands.command(
+    description="Trouve le pseudo Discord d'un membre à partir de son nom réel"
+)
+@app_commands.guild_only()
+@bureau_or_admin_only()
+async def find_discord(interaction: discord.Interaction):
+    modal = FindDiscordModal()
     await interaction.response.send_modal(modal)
     await modal.wait()
 
@@ -671,6 +727,7 @@ class ThalosBot(commands.Bot):
             whois,
             pin,
             check_member,
+            find_discord,
             give_role,
             make_membercheck,
             info,
@@ -701,6 +758,22 @@ class ThalosBot(commands.Bot):
         command: Union[discord.app_commands.Command, discord.app_commands.ContextMenu],
     ):
         self.logger.info(f"Command {command.name} has successfully completed")
+
+    async def on_app_command_error(
+        self,
+        interaction: discord.Interaction,
+        error: app_commands.AppCommandError,
+    ):
+        if isinstance(error, app_commands.CheckFailure):
+            embed = MessageTemplate(
+                description="Vous n'avez pas la permission d'utiliser cette commande."
+            )
+            if not interaction.response.is_done():
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            else:
+                await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            self.logger.error(f"App command error: {error}", exc_info=True)
 
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.command is not None:
