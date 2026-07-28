@@ -1,10 +1,10 @@
-import logging
 import asyncio
+import logging
 from os import getenv
 
-from SilicaAnimus.helloasso_client import HelloAssoClient
 from SilicaAnimus.discord_client import DiscordClient
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient
+from SilicaAnimus.helloasso_client import HelloAssoClient
 
 __all__ = ["SilicaAnimus"]
 

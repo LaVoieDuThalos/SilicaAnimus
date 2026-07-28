@@ -1,6 +1,7 @@
-import pytest
 import asyncio
 from os import getenv
+
+import pytest
 from dotenv import load_dotenv
 
 from SilicaAnimus.discord_client import DiscordClient

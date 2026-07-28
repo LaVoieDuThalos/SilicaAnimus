@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SilicaAnimus"
-version = "0.2.0"
+version = "0.3.0"
 description = "Le bot du serveur Discord de la voie du Thalos"
 
 readme = "README.md"
@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [project.scripts]
-SilicaAnimus = "SilicaAnimus:main"
+SilicaAnimus = "SilicaAnimus.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -48,9 +48,13 @@ asyncio_default_fixture_loop_scope = "session"
 testpaths = ["src/tests"]
 pythonpath = ["src"]
 
+[tool.ruff.lint]
+ignore = ["FA100", "FA102", "N999"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",
+    "ruff>=0.16.0",
 ]
 test = [
     "pytest>=8.3.5",

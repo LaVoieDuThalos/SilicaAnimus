@@ -1,7 +1,7 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord
+import pytest
 
 from SilicaAnimus.discord_client import FindDiscordModal, _bureau_or_admin_predicate
 from SilicaAnimus.google_sheets_client import MemberInfo
@@ -130,18 +130,24 @@ class TestBureauOrAdminCheck:
 
     @pytest.mark.asyncio
     async def test_admin_role_is_allowed(self):
-        with patch.dict("os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}):
+        with patch.dict(
+            "os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}
+        ):
             interaction = self._make_interaction([100])
             assert await _bureau_or_admin_predicate(interaction) is True
 
     @pytest.mark.asyncio
     async def test_bureau_role_is_allowed(self):
-        with patch.dict("os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}):
+        with patch.dict(
+            "os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}
+        ):
             interaction = self._make_interaction([200])
             assert await _bureau_or_admin_predicate(interaction) is True
 
     @pytest.mark.asyncio
     async def test_other_role_is_denied(self):
-        with patch.dict("os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}):
+        with patch.dict(
+            "os.environ", {"ADMIN_ROLE_ID": "100", "BUREAU_ROLE_ID": "200"}
+        ):
             interaction = self._make_interaction([999])
             assert await _bureau_or_admin_predicate(interaction) is False

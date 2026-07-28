@@ -1,11 +1,11 @@
-import logging
-from urllib import request, parse
-from urllib.error import URLError, HTTPError
-from os import getenv
-from http.client import HTTPResponse
-import json
 import asyncio
+import json
+import logging
+from http.client import HTTPResponse
+from os import getenv
 from typing import List, Tuple, Union
+from urllib import parse, request
+from urllib.error import HTTPError, URLError
 
 from SilicaAnimus.utils import normalize_name
 
@@ -62,8 +62,8 @@ class HelloAssoClient:
         token_request.add_header("Content-Type", "application/x-www-form-urlencoded")
 
         self.logger.info("Getting token")
-        resp: HTTPResponse
-        with request.urlopen(token_request) as resp:
+        resp: HTTPResponse = await asyncio.to_thread(request.urlopen, token_request)
+        with resp:
             if resp.status != 200:
                 self.logger.warning(f"Could not get token {resp.getcode()}")
 
@@ -123,8 +123,8 @@ class HelloAssoClient:
             self.logger.error(f"HTTP error during token refresh: {e.code} {e.reason}")
         except URLError as e:
             self.logger.error(f"Network error during token refresh: {e.reason}")
-        except Exception as e:
-            self.logger.exception(f"Unexpected error during token refresh: {e}")
+        except Exception:
+            self.logger.exception("Unexpected error during token refresh")
 
         # En cas d'échec, replanifie une tentative après 60s
         self.logger.info("Retrying token refresh in 60 seconds...")
@@ -149,17 +149,20 @@ class HelloAssoClient:
         members_request_data = members_request_data.encode()
         request_url = (
             f"{getenv('HELLOASSO_API_URL')}/organizations/{getenv('HELLOASSO_ORGANIZATIONSLUG')}/forms/membership/"
-            + f'{getenv("HELLOASSO_MEMBERSHIP_FORM_SLUG")}/orders'
+            + f"{getenv('HELLOASSO_MEMBERSHIP_FORM_SLUG')}/orders"
             + "?pageSize=20"
             + "&withDetails=false"
-            + "&withCount=true"
         )
 
         # if name_filter is not None:
         #     request_url += f"&userSearchKey={name_filter}"
 
         if continuationToken is not None:
+            # withCount is incompatible with continuationToken: the HelloAsso
+            # API silently resets pagination to page 1 if both are present.
             request_url += f"&continuationToken={continuationToken}"
+        else:
+            request_url += "&withCount=true"
 
         self.logger.debug(request_url)
         members_request = request.Request(
@@ -193,14 +196,19 @@ class HelloAssoClient:
         self.logger.info("Getting members")
         resp: HTTPResponse
         while True:
-            with request.urlopen(members_request) as resp:
+            resp = await asyncio.to_thread(request.urlopen, members_request)
+            with resp:
                 if resp.status != 200:
                     self.logger.warning(f"Could not get members {resp.getcode()}")
+                    return False
 
                 resp_data = json.loads(resp.read())
+                if not resp_data["data"]:
+                    return False
+
                 for data in resp_data["data"]:
                     for item in data["items"]:
-                        if "user" not in item.keys():
+                        if "user" not in item:
                             continue
 
                         user = item["user"]
@@ -212,13 +220,14 @@ class HelloAssoClient:
                             self.logger.info(f"{first_name} {last_name} is a member")
                             return True
 
-            if (
-                resp_data["pagination"]["pageIndex"]
-                == resp_data["pagination"]["totalPages"]
-            ):
+            continuationToken = resp_data["pagination"].get("continuationToken")
+            if not continuationToken:
+                self.logger.warning(
+                    "No continuationToken returned despite non-empty page; "
+                    "stopping pagination"
+                )
                 return False
 
-            continuationToken = resp_data["pagination"]["continuationToken"]
             members_request = self.make_membership_request(
                 continuationToken=continuationToken
             )
@@ -237,9 +246,9 @@ class HelloAssoClient:
              set[Tuple[str, str]]: List of first name, last name who are members
         """
 
-        normalize_names_list = list(
-            map(lambda t: (normalize_name(t[0]), normalize_name(t[1])), names)
-        )
+        normalize_names_list = [
+            (normalize_name(t[0]), normalize_name(t[1])) for t in names
+        ]
 
         if self.access_token is None:
             self.logger.warning("No token for get_membership request")
@@ -252,14 +261,19 @@ class HelloAssoClient:
         resp: HTTPResponse
 
         while True:
-            with request.urlopen(members_request) as resp:
+            resp = await asyncio.to_thread(request.urlopen, members_request)
+            with resp:
                 if resp.status != 200:
                     self.logger.warning(f"Could not get members {resp.getcode()}")
+                    return return_set
 
                 resp_data = json.loads(resp.read())
+                if not resp_data["data"]:
+                    return return_set
+
                 for data in resp_data["data"]:
                     for item in data["items"]:
-                        if "user" not in item.keys():
+                        if "user" not in item:
                             continue
 
                         user = item["user"]
@@ -269,13 +283,14 @@ class HelloAssoClient:
                         ) in normalize_names_list:
                             return_set.add((user["firstName"], user["lastName"]))
 
-            if (
-                resp_data["pagination"]["pageIndex"]
-                == resp_data["pagination"]["totalPages"]
-            ):
+            continuationToken = resp_data["pagination"].get("continuationToken")
+            if not continuationToken:
+                self.logger.warning(
+                    "No continuationToken returned despite non-empty page; "
+                    "stopping pagination"
+                )
                 return return_set
 
-            continuationToken = resp_data["pagination"]["continuationToken"]
             members_request = self.make_membership_request(
                 continuationToken=continuationToken
             )
@@ -296,7 +311,6 @@ class HelloAssoClient:
         """Stops the client"""
 
         self.run = False
-        return
 
     @property
     def is_logged(self):

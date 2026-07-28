@@ -1,10 +1,11 @@
+import asyncio
 import logging
 import sys
-import typer
-import asyncio
 from functools import wraps
 
+import typer
 from dotenv import load_dotenv
+
 from SilicaAnimus import SilicaAnimus
 
 

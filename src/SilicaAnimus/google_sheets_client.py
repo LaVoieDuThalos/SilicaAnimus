@@ -1,13 +1,13 @@
-from os import getenv
-
-from google.oauth2 import service_account
-import googleapiclient.discovery
-from googleapiclient.errors import HttpError
-from SilicaAnimus.utils import normalize_name
-from dataclasses import dataclass
 import logging
-
+from dataclasses import dataclass
+from os import getenv
 from typing import List
+
+import googleapiclient.discovery
+from google.oauth2 import service_account
+from googleapiclient.errors import HttpError
+
+from SilicaAnimus.utils import normalize_name
 
 
 @dataclass
@@ -46,7 +46,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .get(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1:F1000',
+                    range=f"{getenv('GOOGLE_SHEET_ID')}!A1:F1000",
                 )
                 .execute()
             )
@@ -74,9 +74,7 @@ class GoogleSheetsClient:
         member_info = MemberInfo(first_name=first_name, last_name=last_name)
 
         for row_index in range(len(values)):
-            normalized_names = list(
-                map(lambda s: normalize_name(s), values[row_index][:2])
-            )
+            normalized_names = [normalize_name(s) for s in values[row_index][:2]]
             if normalized_names == [
                 normalize_name(last_name),
                 normalize_name(first_name),
@@ -204,9 +202,7 @@ class GoogleSheetsClient:
         }
 
         for row_index in range(len(values)):
-            normalized_names = list(
-                map(lambda s: normalize_name(s), values[row_index][:2])
-            )
+            normalized_names = [normalize_name(s) for s in values[row_index][:2]]
             if normalized_names == [
                 normalize_name(member_info.last_name),
                 normalize_name(member_info.first_name),
@@ -220,7 +216,7 @@ class GoogleSheetsClient:
                     self.sheets.values()
                     .append(
                         spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
+                        range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
                         valueInputOption="USER_ENTERED",
                         body=body,
                     )
@@ -238,7 +234,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .update(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
+                    range=f"{getenv('GOOGLE_SHEET_ID')}!A{member_sheet_row}:F{member_sheet_row}",
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )
@@ -295,7 +291,7 @@ class GoogleSheetsClient:
                 member_sheet_row = names_list.index(name_tuple) + 1
                 update_data.append(
                     {
-                        "range": f'{getenv("GOOGLE_SHEET_ID")}!A{member_sheet_row}:F{member_sheet_row}',
+                        "range": f"{getenv('GOOGLE_SHEET_ID')}!A{member_sheet_row}:F{member_sheet_row}",
                         "values": [insert_values[name_tuple]],
                     }
                 )
@@ -321,7 +317,7 @@ class GoogleSheetsClient:
                 self.sheets.values()
                 .append(
                     spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f'{getenv("GOOGLE_SHEET_ID")}!A1',
+                    range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
                     valueInputOption="USER_ENTERED",
                     body=body,
                 )

@@ -1,5 +1,6 @@
-import pytest
 from os import getenv
+
+import pytest
 from dotenv import load_dotenv
 
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo

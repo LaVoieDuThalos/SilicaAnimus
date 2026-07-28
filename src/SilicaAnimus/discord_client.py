@@ -1,16 +1,16 @@
-import logging
 import asyncio
-from typing import Union
-from dotenv import load_dotenv
+import logging
 from datetime import datetime
 from os import getenv
+from typing import Union
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+from dotenv import load_dotenv
 
-from SilicaAnimus.helloasso_client import HelloAssoClient
 from SilicaAnimus.google_sheets_client import GoogleSheetsClient, MemberInfo
+from SilicaAnimus.helloasso_client import HelloAssoClient
 
 load_dotenv()
 
@@ -36,7 +36,7 @@ class MemberProcessView(discord.ui.View):
     """
 
     def __init__(self, client, *args, **kwargs):
-        super().__init__(timeout=None, *args, **kwargs)
+        super().__init__(*args, timeout=None, **kwargs)
         self.client = client
 
     @discord.ui.button(
@@ -308,7 +308,8 @@ class UpdateMemberButtons(discord.ui.View):
 async def ping(interaction: discord.Interaction):
     client = interaction.client
     embed = MessageTemplate(
-        title="Pong Pong!", description=(f"Bot ping is {round(1000*client.latency)} ms")
+        title="Pong Pong!",
+        description=(f"Bot ping is {round(1000 * client.latency)} ms"),
     )
 
     await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -387,8 +388,8 @@ async def check_member(interaction: discord.Interaction):
 
 
 async def _bureau_or_admin_predicate(interaction: discord.Interaction) -> bool:
-    admin_role_id = int(getenv("ADMIN_ROLE_ID", 0))
-    bureau_role_id = int(getenv("BUREAU_ROLE_ID", 0))
+    admin_role_id = int(getenv("ADMIN_ROLE_ID", "0"))
+    bureau_role_id = int(getenv("BUREAU_ROLE_ID", "0"))
     role_ids = {role.id for role in interaction.user.roles}
     return admin_role_id in role_ids or bureau_role_id in role_ids
 
@@ -506,7 +507,7 @@ async def update_data_table(interaction: discord.Interaction):
     # Get the whole table to loop on
     data = await parent.gsheet_client.get_spreadsheet()
     if data is None:
-        return None
+        return
 
     values = data.get("values", [])
 
@@ -661,7 +662,7 @@ class ThalosBot(commands.Bot):
     @tasks.loop(minutes=1)
     async def weekly_message(self):
         """Check every minute if we should send the scheduled message"""
-        now = datetime.now()
+        now = datetime.now().astimezone()
 
         # Get configured time
         hour = int(getenv("WEEKLY_MESSAGE_HOUR", "22"))
@@ -689,10 +690,14 @@ class ThalosBot(commands.Bot):
 
         # Check if today is one of the configured weekdays
         current_weekday = now.weekday()
-        self.logger.info(f"Current weekday: {current_weekday}, allowed: {allowed_weekdays}")
+        self.logger.info(
+            f"Current weekday: {current_weekday}, allowed: {allowed_weekdays}"
+        )
 
         if current_weekday not in allowed_weekdays:
-            self.logger.info(f"Skipping message - today ({current_weekday}) not in allowed days {allowed_weekdays}")
+            self.logger.info(
+                f"Skipping message - today ({current_weekday}) not in allowed days {allowed_weekdays}"
+            )
             return
 
         thread_id = getenv("WEEKLY_MESSAGE_THREAD_ID")
@@ -721,8 +726,8 @@ class ThalosBot(commands.Bot):
                 self.logger.info(f"✅ Weekly message sent to thread {thread_id}")
             else:
                 self.logger.error(f"Thread {thread_id} not found")
-        except Exception as e:
-            self.logger.error(f"Error sending weekly message: {e}", exc_info=True)
+        except Exception:
+            self.logger.exception("Error sending weekly message")
 
     @weekly_message.before_loop
     async def before_weekly_message(self):
@@ -784,7 +789,7 @@ class ThalosBot(commands.Bot):
             else:
                 await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            self.logger.error(f"App command error: {error}", exc_info=True)
+            self.logger.error(f"App command error: {error}")
 
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.command is not None:

@@ -1,6 +1,7 @@
-import pytest
 import asyncio
 from os import getenv
+
+import pytest
 from dotenv import load_dotenv
 
 from SilicaAnimus.helloasso_client import HelloAssoClient
@@ -24,7 +25,7 @@ async def test_helloasso_client_connection():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Requires valid HelloAsso API data and member exists")
+# @pytest.mark.skip(reason="Requires valid HelloAsso API data and member exists")
 async def test_helloasso_membership_check():
     """Test membership verification for individual members"""
     client = HelloAssoClient(

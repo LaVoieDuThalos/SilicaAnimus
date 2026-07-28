@@ -1,9 +1,10 @@
-import pytest
 import logging
 import sys
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import discord
+import pytest
+
 from SilicaAnimus.discord_client import ThalosBot
 
 pytest_plugins = ("pytest_asyncio",)
@@ -45,6 +46,7 @@ class TestWeeklyMessage:
                 mock_now.hour = 22
                 mock_now.minute = 0
                 mock_now.date.return_value = Mock()
+                mock_now.astimezone.return_value = mock_now
                 mock_datetime.now.return_value = mock_now
 
                 # Run the weekly_message task
@@ -108,6 +110,7 @@ class TestWeeklyMessage:
                     mock_now.hour = 22
                     mock_now.minute = 0
                     mock_now.date.return_value = Mock()
+                    mock_now.astimezone.return_value = mock_now
                     mock_datetime.now.return_value = mock_now
                     await bot.weekly_message()
                     mock_channel.send.assert_called_once_with("Weekend message")
@@ -159,6 +162,7 @@ class TestWeeklyMessage:
                 mock_now.hour = 22
                 mock_now.minute = 0
                 mock_now.date.return_value = Mock()
+                mock_now.astimezone.return_value = mock_now
                 mock_datetime.now.return_value = mock_now
 
                 await bot.weekly_message()
@@ -233,10 +237,11 @@ async def test_weekly_message_integration():
 
     To run: pytest tests/test_weekly_message.py::test_weekly_message_integration -v -s
     """
-    from datetime import datetime, timedelta
-    from dotenv import load_dotenv
-    from os import getenv
     import asyncio
+    from datetime import datetime, timedelta
+    from os import getenv
+
+    from dotenv import load_dotenv
 
     load_dotenv()
 
@@ -245,7 +250,7 @@ async def test_weekly_message_integration():
         pytest.skip("DISCORD_TOKEN not set, skipping integration test")
 
     # Calculate time 30 seconds from now
-    now = datetime.now()
+    now = datetime.now().astimezone()
     target_time = now + timedelta(seconds=30)
 
     # Configure environment for test
@@ -269,7 +274,9 @@ async def test_weekly_message_integration():
         )
 
         print(f"\n⏰ Test démarré à {now.strftime('%H:%M:%S')}")
-        print(f"📅 Message sera envoyé à {target_time.strftime('%H:%M:%S')} (dans 30 secondes)")
+        print(
+            f"📅 Message sera envoyé à {target_time.strftime('%H:%M:%S')} (dans 30 secondes)"
+        )
         print("📍 Canal cible: 767227407001321472")
 
         # Start the bot
@@ -296,14 +303,18 @@ async def test_weekly_message_integration():
                 print(f"✅ Canal trouvé avec fetch: {channel.name}")
 
             # Calculate remaining wait time
-            remaining = 40 - (datetime.now() - now).total_seconds()
+            remaining = 40 - (datetime.now().astimezone() - now).total_seconds()
             if remaining > 0:
-                print(f"⏳ Attente de {int(remaining)} secondes pour l'envoi du message...")
+                print(
+                    f"⏳ Attente de {int(remaining)} secondes pour l'envoi du message..."
+                )
                 await asyncio.sleep(remaining)
 
             print("✅ Délai d'attente terminé")
             print("🔍 Vérifiez manuellement que le message a été envoyé sur Discord")
-            print(f"   Message attendu: '🤖 Test message planifié - {now.strftime('%Y-%m-%d %H:%M:%S')}'")
+            print(
+                f"   Message attendu: '🤖 Test message planifié - {now.strftime('%Y-%m-%d %H:%M:%S')}'"
+            )
 
         finally:
             # Stop the bot
