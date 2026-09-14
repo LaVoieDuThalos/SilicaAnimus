@@ -13,6 +13,7 @@ All commands run from the project root. The project uses a local virtualenv at `
 **Setup:**
 ```bash
 uv sync
+uv run pre-commit install
 ```
 
 **Run the bot:**
