@@ -409,6 +409,21 @@ async def find_discord(interaction: discord.Interaction):
     await modal.wait()
 
 
+@app_commands.command(description="Liste les membres inscrit sur Hello Asso")
+@app_commands.guild_only()
+@bureau_or_admin_only()
+async def list_members(interaction: discord.Interaction, show: bool = False):
+    await interaction.response.defer(ephemeral=not show)
+    members = await interaction.client.parent_client.helloasso_client.get_members()
+    embed = MessageTemplate(
+        title="Liste des membres: ",
+        description="\n".join(f"{member[0]} {member[1]}" for member in members)
+        if members
+        else "Aucun membre trouvé",
+    )
+    await interaction.followup.send(embed=embed, ephemeral=not show)
+
+
 @app_commands.command(
     description="""
     Donne un rôle à tous les membres ayant le rôle fourni en paramètre
@@ -744,6 +759,7 @@ class ThalosBot(commands.Bot):
             pin,
             check_member,
             find_discord,
+            list_members,
             give_role,
             make_membercheck,
             info,

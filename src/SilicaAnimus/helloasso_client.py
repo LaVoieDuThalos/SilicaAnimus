@@ -136,7 +136,7 @@ class HelloAssoClient:
     def make_membership_request(
         self,
         name_filter: Union[str, None] = None,
-        continuationToken: Union[str, None] = None,
+        continuation_token: Union[str, None] = None,
     ) -> request.Request:
         members_request_data = parse.urlencode(
             {
@@ -157,10 +157,10 @@ class HelloAssoClient:
         # if name_filter is not None:
         #     request_url += f"&userSearchKey={name_filter}"
 
-        if continuationToken is not None:
+        if continuation_token is not None:
             # withCount is incompatible with continuationToken: the HelloAsso
             # API silently resets pagination to page 1 if both are present.
-            request_url += f"&continuationToken={continuationToken}"
+            request_url += f"&continuationToken={continuation_token}"
         else:
             request_url += "&withCount=true"
 
@@ -220,8 +220,8 @@ class HelloAssoClient:
                             self.logger.info(f"{first_name} {last_name} is a member")
                             return True
 
-            continuationToken = resp_data["pagination"].get("continuationToken")
-            if not continuationToken:
+            continuation_token = resp_data["pagination"].get("continuationToken")
+            if not continuation_token:
                 self.logger.warning(
                     "No continuationToken returned despite non-empty page; "
                     "stopping pagination"
@@ -229,7 +229,7 @@ class HelloAssoClient:
                 return False
 
             members_request = self.make_membership_request(
-                continuationToken=continuationToken
+                continuation_token=continuation_token
             )
 
         self.logger.info(f"{first_name} {last_name} is not a member")
@@ -237,7 +237,7 @@ class HelloAssoClient:
 
     async def get_memberships(
         self, names: List[Tuple[str, str]]
-    ) -> set[Tuple[str, str]]:
+    ) -> set[Tuple[str, str]] | None:
         """Check if a person is a current member of the association
 
         Args:
@@ -283,8 +283,8 @@ class HelloAssoClient:
                         ) in normalize_names_list:
                             return_set.add((user["firstName"], user["lastName"]))
 
-            continuationToken = resp_data["pagination"].get("continuationToken")
-            if not continuationToken:
+            continuation_token = resp_data["pagination"].get("continuationToken")
+            if not continuation_token:
                 self.logger.warning(
                     "No continuationToken returned despite non-empty page; "
                     "stopping pagination"
@@ -292,7 +292,57 @@ class HelloAssoClient:
                 return return_set
 
             members_request = self.make_membership_request(
-                continuationToken=continuationToken
+                continuation_token=continuation_token
+            )
+
+    async def get_members(
+        self,
+    ) -> set[Tuple[str, str]] | None:
+        """List the members of the association
+        Args:
+        Returns:
+            The list of members of the association [First name, Last name]
+        """
+
+        if self.access_token is None:
+            self.logger.warning("No token for get_membership request")
+            return None
+
+        members_request = self.make_membership_request()
+        return_set = set()
+
+        self.logger.info("Getting members")
+        resp: HTTPResponse
+
+        while True:
+            resp = await asyncio.to_thread(request.urlopen, members_request)
+            with resp:
+                if resp.status != 200:
+                    self.logger.warning(f"Could not get members {resp.getcode()}")
+                    return return_set
+
+                resp_data = json.loads(resp.read())
+                if not resp_data["data"]:
+                    return return_set
+
+                for data in resp_data["data"]:
+                    for item in data["items"]:
+                        if "user" not in item:
+                            continue
+
+                        user = item["user"]
+                        return_set.add((user["firstName"], user["lastName"]))
+
+            continuation_token = resp_data["pagination"].get("continuationToken")
+            if not continuation_token:
+                self.logger.warning(
+                    "No continuation_token returned despite non-empty page; "
+                    "stopping pagination"
+                )
+                return return_set
+
+            members_request = self.make_membership_request(
+                continuation_token=continuation_token
             )
 
     async def start(self) -> bool:

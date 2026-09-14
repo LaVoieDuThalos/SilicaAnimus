@@ -53,7 +53,7 @@ async def test_helloasso_membership_check():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Requires valid HelloAsso API data and members exist")
+# @pytest.mark.skip(reason="Requires valid HelloAsso API data and members exist")
 async def test_helloasso_memberships_check():
     """Test batch membership verification"""
     client = HelloAssoClient(
@@ -68,9 +68,32 @@ async def test_helloasso_memberships_check():
         [("Lucas", "MARTI"), ("Luas", "MARTI"), ('"Lucas" ', '"MARTI" ')]
     )
 
-    assert isinstance(result, list), "Expected result to be a list"
+    assert isinstance(result, set), "Expected result to be a list"
     # Should return valid members only
-    assert ("Lucas", "MARTI") in result or ('"Lucas" ', '"MARTI" ') in result
+    assert ("Lucas", "Marti") in result or ('"Lucas" ', '"Marti" ') in result
+
+    await client.close()
+    await future
+
+
+@pytest.mark.asyncio
+# @pytest.mark.skip(reason="Requires valid HelloAsso API data and members exist")
+async def test_helloasso_members():
+    """Test batch membership verification"""
+    client = HelloAssoClient(
+        client_id=getenv("HELLOASSO_CLIENT_ID"),
+        client_secret=getenv("HELLOASSO_CLIENT_SECRET"),
+    )
+    future = asyncio.create_task(client.start())
+    while not client.is_logged:
+        await asyncio.sleep(1)
+
+    result = await client.get_members()
+    print(result)
+
+    assert isinstance(result, set), "Expected result to be a list"
+    # Should return valid members only
+    assert ("Lucas", "Marti") in result or ('"Lucas" ', '"Marti" ') in result
 
     await client.close()
     await future
