@@ -12,8 +12,20 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: silicaanimus
 
-# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
+# This workflow has two jobs, both configured to run on the latest available version of Ubuntu.
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Create GitHub release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release create "${{ github.ref_name }}" --generate-notes --title "${{ github.ref_name }}"
+
   build-and-push-image:
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
