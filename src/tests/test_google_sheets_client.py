@@ -1,4 +1,5 @@
 from os import getenv
+from typing import List
 
 import pytest
 from dotenv import load_dotenv
@@ -35,6 +36,24 @@ async def test_google_sheets_get_member_by_name():
 
 
 @pytest.mark.asyncio
+async def test_google_sheets_get_member_by_names():
+    """Test fetching member by name"""
+    client = GoogleSheetsClient(getenv("GOOGLE_SERVICE_ACCOUNT_SECRETS_PATH"))
+    members = await client.get_member_by_names(
+        [
+            ("titi", "tata"),
+            ("tutu", "tata"),
+            ("Annnnnnabbbellll", "Foouuuurcccaaaddeee"),
+            ("tata", "tutu"),
+        ]
+    )
+
+    print(members)
+
+    assert isinstance(members, List)
+
+
+@pytest.mark.asyncio
 async def test_google_sheets_get_members_by_discord_name():
     """Test fetching members by Discord usernames"""
     client = GoogleSheetsClient(getenv("GOOGLE_SERVICE_ACCOUNT_SECRETS_PATH"))
@@ -67,3 +86,7 @@ async def test_google_sheets_add_members():
     ]
     await client.add_members(members_info)
     # Test passes if no exception is raised
+
+
+if __name__ == "__main__":
+    test_google_sheets_get_member_by_names()

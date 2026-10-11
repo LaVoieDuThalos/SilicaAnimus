@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 from os import getenv
-from typing import List
+from typing import List, Tuple
 
 import googleapiclient.discovery
 from google.oauth2 import service_account
@@ -92,6 +92,51 @@ class GoogleSheetsClient:
                 return member_info
 
         return member_info
+
+    async def get_member_by_names(
+        self, discord_names: List[Tuple[str, str]]
+    ) -> None | List[MemberInfo]:
+        """Get the members' information using first names and last names.
+
+        Args:
+            first_name (str): First name for the query
+            last_name (str): Last name for the query
+        """
+
+        ss = await self.get_spreadsheet()
+        if ss is None:
+            self.logger.error("Could not open spreadsheet!")
+            raise OSError("Could not open spreadsheet!")
+
+        values = ss.get("values", [])
+        normalized_names = [
+            (normalize_name(t[1]), normalize_name(t[0])) for t in discord_names
+        ]  # first name, last_name
+        member_infos = []
+
+        for row_index in range(len(values)):
+            normalized_current_name = (
+                normalize_name(values[row_index][0]),
+                normalize_name(values[row_index][1]),
+            )
+            if normalized_current_name not in normalized_names:
+                continue
+
+            member_info = MemberInfo(
+                first_name=normalized_current_name[1],
+                last_name=normalized_current_name[0],
+            )
+            member_info.in_spreadsheet = True
+            if len(values[row_index]) >= 3:
+                member_info.discord_nickname = values[row_index][2]
+            if len(values[row_index]) >= 4:
+                member_info.member_last_year = values[row_index][3] == "Oui"
+            if len(values[row_index]) >= 5:
+                member_info.member_current_year = values[row_index][4] == "Oui"
+
+            member_infos.append(member_info)
+
+        return member_infos
 
     async def get_member_by_discord_name(self, discord_name: str) -> MemberInfo:
         """Get the member's information using the discord name
