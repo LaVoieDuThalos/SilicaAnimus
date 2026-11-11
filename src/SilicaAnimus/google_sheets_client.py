@@ -93,7 +93,7 @@ class GoogleSheetsClient:
 
         return member_info
 
-    async def get_member_by_names(
+    async def get_members_by_names(
         self, discord_names: List[Tuple[str, str]]
     ) -> None | List[MemberInfo]:
         """Get the members' information using first names and last names.

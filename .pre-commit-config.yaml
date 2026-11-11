@@ -12,7 +12,7 @@ repos:
   # Ruff version.
   rev: v0.16.0
   hooks:
-    # Run the linter.
+    # Run the linter.r
     - id: ruff-check
       args: [ --fix ]
     # Run the formatter.

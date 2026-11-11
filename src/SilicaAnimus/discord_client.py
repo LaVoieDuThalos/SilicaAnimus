@@ -1,8 +1,11 @@
 import asyncio
 import logging
+
+logger = logging.getLogger(__name__)
+
 from datetime import datetime
 from os import getenv
-from typing import Union
+from typing import Optional, Union
 
 import discord
 from discord import app_commands
@@ -241,7 +244,6 @@ class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
 class UpdateMemberButtons(discord.ui.View):
     def __init__(self, logger, embed, role, data: dict, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logger
         self.embed = embed
         self.data = data
         self.role = role
@@ -270,12 +272,12 @@ class UpdateMemberButtons(discord.ui.View):
         for user in self.data["to_unmember"]:
             user = interaction.guild.get_member_named(user)
             await user.remove_roles(self.role)
-            self.logger.info(f"{user} is removed from the member list")
+            logger.info(f"{user} is removed from the member list")
 
         for user in self.data["to_member"]:
             user = interaction.guild.get_member_named(user)
             await user.add_roles(self.role)
-            self.logger.info(f"{user} is added to the member list")
+            logger.info(f"{user} is added to the member list")
 
         self.embed.description = "Liste des membres mise à jour"
         self.embed.clear_fields()
@@ -519,32 +521,15 @@ async def update_data_table(interaction: discord.Interaction):
     parent = interaction.client.parent_client
     await interaction.response.defer(ephemeral=True)
 
-    # Get the whole table to loop on
-    data = await parent.gsheet_client.get_spreadsheet()
-    if data is None:
-        return
-
-    values = data.get("values", [])
-
-    # Make the list of names
-    names = [
-        (first_name, last_name)
-        for last_name, first_name, *others in values
-        if first_name != "Nom" or last_name != "Prénom"
-    ]
-
     # filter to get only members
-    members = await parent.helloasso_client.get_memberships(names)
+    members = await parent.helloasso_client.get_members()
+    members_infos = await parent.gsheet_client.get_members_by_names(list(members))
 
-    # Update member info for each members found
-    member_list = []
-    for first_name, last_name in members:
-        await asyncio.sleep(0.05)
-        m_info = await parent.gsheet_client.get_member_by_name(first_name, last_name)
-        m_info.member_current_year = True
-        member_list.append(m_info)
+    # Update member info for each member found
+    for member_info in members_infos:
+        member_info.member_current_year = True
 
-    await parent.gsheet_client.add_members(member_list)
+    await parent.gsheet_client.add_members(members_infos)
 
     embed = MessageTemplate(
         title="Mise à jour du tableur adhérents google",
@@ -693,24 +678,22 @@ class ThalosBot(commands.Bot):
             return
         self._last_message_time = current_time_key
 
-        self.logger.info("weekly_message task triggered at correct time")
+        logger.info("weekly_message task triggered at correct time")
 
         # Get configured weekdays (default: Friday,Saturday = 4,5)
         weekdays_str = getenv("WEEKLY_MESSAGE_WEEKDAYS", "4,5")
         try:
             allowed_weekdays = [int(day.strip()) for day in weekdays_str.split(",")]
         except ValueError:
-            self.logger.error(f"Invalid WEEKLY_MESSAGE_WEEKDAYS format: {weekdays_str}")
+            logger.error(f"Invalid WEEKLY_MESSAGE_WEEKDAYS format: {weekdays_str}")
             return
 
         # Check if today is one of the configured weekdays
         current_weekday = now.weekday()
-        self.logger.info(
-            f"Current weekday: {current_weekday}, allowed: {allowed_weekdays}"
-        )
+        logger.info(f"Current weekday: {current_weekday}, allowed: {allowed_weekdays}")
 
         if current_weekday not in allowed_weekdays:
-            self.logger.info(
+            logger.info(
                 f"Skipping message - today ({current_weekday}) not in allowed days {allowed_weekdays}"
             )
             return
@@ -718,31 +701,31 @@ class ThalosBot(commands.Bot):
         thread_id = getenv("WEEKLY_MESSAGE_THREAD_ID")
         message_content = getenv("WEEKLY_MESSAGE_CONTENT")
 
-        self.logger.info(f"Thread ID: {thread_id}, Message: {message_content}")
+        logger.info(f"Thread ID: {thread_id}, Message: {message_content}")
 
         if not thread_id or not message_content:
-            self.logger.warning(
+            logger.warning(
                 "WEEKLY_MESSAGE_THREAD_ID or WEEKLY_MESSAGE_CONTENT not set in .env"
             )
             return
 
         try:
             thread = self.get_channel(int(thread_id))
-            self.logger.info(f"get_channel result: {thread}")
+            logger.info(f"get_channel result: {thread}")
 
             if thread is None:
-                self.logger.info("Trying fetch_channel...")
+                logger.info("Trying fetch_channel...")
                 thread = await self.fetch_channel(int(thread_id))
-                self.logger.info(f"fetch_channel result: {thread}")
+                logger.info(f"fetch_channel result: {thread}")
 
             if thread:
-                self.logger.info(f"Sending message to {thread.name}...")
+                logger.info(f"Sending message to {thread.name}...")
                 await thread.send(message_content)
-                self.logger.info(f"✅ Weekly message sent to thread {thread_id}")
+                logger.info(f"✅ Weekly message sent to thread {thread_id}")
             else:
-                self.logger.error(f"Thread {thread_id} not found")
+                logger.error(f"Thread {thread_id} not found")
         except Exception:
-            self.logger.exception("Error sending weekly message")
+            logger.exception("Error sending weekly message")
 
     @weekly_message.before_loop
     async def before_weekly_message(self):
@@ -750,7 +733,7 @@ class ThalosBot(commands.Bot):
         await self.wait_until_ready()
 
     async def setup_hook(self):
-        self.logger.info("Running setup hook")
+        logger.info("Running setup hook")
         commands = [
             ping,
             echo,
@@ -769,27 +752,27 @@ class ThalosBot(commands.Bot):
         for command in commands:
             self.tree.add_command(command, guild=self.thalos_guild)
         self.add_view(MemberProcessView(self.parent_client))
-        self.logger.info("Persistent view added to client")
+        logger.info("Persistent view added to client")
 
         # Start scheduled tasks
         if not self.weekly_message.is_running():
             self.weekly_message.start()
-            self.logger.info("Weekly message task started")
+            logger.info("Weekly message task started")
 
     async def on_ready(self) -> None:
-        self.logger.info(f"Logged as {self.user}")
+        logger.info(f"Logged as {self.user}")
 
         # self.client.tree.clear_commands(guild=self.thalos_guild)
         for command in await self.tree.sync(guild=self.thalos_guild):
-            self.logger.info(f'Command "{command.name}" synced to the app')
-        self.logger.info("Commands added")
+            logger.info(f'Command "{command.name}" synced to the app')
+        logger.info("Commands added")
 
     async def on_app_command_completion(
         self,
         interaction: discord.Interaction,
         command: Union[discord.app_commands.Command, discord.app_commands.ContextMenu],
     ):
-        self.logger.info(f"Command {command.name} has successfully completed")
+        logger.info(f"Command {command.name} has successfully completed")
 
     async def on_app_command_error(
         self,
@@ -805,11 +788,11 @@ class ThalosBot(commands.Bot):
             else:
                 await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            self.logger.error(f"App command error: {error}")
+            logger.error(f"App command error: {error}")
 
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.command is not None:
-            self.logger.info(
+            logger.info(
                 f"Command {interaction.command.name}"
                 + f" is called by {interaction.user}"
                 + " with these arguments :"
@@ -823,25 +806,29 @@ class DiscordClient:
     def __init__(
         self,
         token: str,
-        helloasso_client: HelloAssoClient,
-        gsheet_client: GoogleSheetsClient,
+        helloasso_client: Optional[HelloAssoClient] = None,
+        gsheet_client: Optional[GoogleSheetsClient] = None,
     ):
-        """_summary_"""
+
         self.intents = discord.Intents.default()
         self.intents.message_content = True
         self.intents.members = True
         self.intents.guilds = True
         self.intents.dm_messages = True
 
-        self.helloasso_client: HelloAssoClient = helloasso_client
-        self.gsheet_client: GoogleSheetsClient = gsheet_client
-
         self.client = ThalosBot(command_prefix="!", intents=self.intents)
+
+        if helloasso_client is None:
+            logger.debug("No hello asso client defined")
+
+        if gsheet_client is None:
+            logger.debug("No gsheet client defined")
+
+        self.helloasso_client = helloasso_client
+        self.gsheet_client = gsheet_client
 
         self.client.parent_client = self
         self.tree = self.client.tree
-
-        self.logger = self.client.logger = logging.getLogger(__name__)
 
         self.token = token
         self.client.thalos_guild = self.thalos_guild = None
@@ -856,24 +843,24 @@ class DiscordClient:
         Args:
             token (str): Discord API authentification token
         """
-        self.logger.info("Starting...")
+        logger.info("Starting...")
         self.start_future = asyncio.create_task(self.client.start(self.token))
-        self.logger.info("Running...")
+        logger.info("Running...")
 
         while self.run:
             await asyncio.sleep(1)
 
         await self.client.close()
         await self.start_future
-        self.logger.info("Closed")
+        logger.info("Closed")
 
         return True
 
     async def close(self) -> bool:
         """Stops the bot"""
 
-        self.logger.info("Closing...")
+        logger.info("Closing...")
         self.run = False
-        self.logger.info("Closed...")
+        logger.info("Closed...")
 
         return True

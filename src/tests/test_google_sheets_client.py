@@ -36,10 +36,10 @@ async def test_google_sheets_get_member_by_name():
 
 
 @pytest.mark.asyncio
-async def test_google_sheets_get_member_by_names():
+async def test_google_sheets_get_members_by_names():
     """Test fetching member by name"""
     client = GoogleSheetsClient(getenv("GOOGLE_SERVICE_ACCOUNT_SECRETS_PATH"))
-    members = await client.get_member_by_names(
+    members = await client.get_members_by_names(
         [
             ("titi", "tata"),
             ("tutu", "tata"),
@@ -86,7 +86,3 @@ async def test_google_sheets_add_members():
     ]
     await client.add_members(members_info)
     # Test passes if no exception is raised
-
-
-if __name__ == "__main__":
-    test_google_sheets_get_member_by_names()
