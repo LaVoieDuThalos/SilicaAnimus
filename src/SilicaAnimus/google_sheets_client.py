@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from dataclasses import dataclass
 from os import getenv
@@ -42,14 +43,11 @@ class GoogleSheetsClient:
             Union[None, ResourceWarning]: The spreadsheet or None if an error occured
         """
         try:
-            result = (
-                self.sheets.values()
-                .get(
-                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv('GOOGLE_SHEET_ID')}!A1:F1000",
-                )
-                .execute()
+            request = self.sheets.values().get(
+                spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                range=f"{getenv('GOOGLE_SHEET_ID')}!A1:F1000",
             )
+            result = await asyncio.to_thread(request.execute)
 
             return result
         except HttpError as error:
@@ -257,16 +255,13 @@ class GoogleSheetsClient:
         else:
             self.logger.info("Member is not in the spreadsheet")
             try:
-                (
-                    self.sheets.values()
-                    .append(
-                        spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                        range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
-                        valueInputOption="USER_ENTERED",
-                        body=body,
-                    )
-                    .execute()
+                request = self.sheets.values().append(
+                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                    range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
+                    valueInputOption="USER_ENTERED",
+                    body=body,
                 )
+                await asyncio.to_thread(request.execute)
             except HttpError as error:
                 self.logger.error(error.content)
                 return None
@@ -275,16 +270,13 @@ class GoogleSheetsClient:
 
         self.logger.info("Member is already in the spreadsheet")
         try:
-            (
-                self.sheets.values()
-                .update(
-                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv('GOOGLE_SHEET_ID')}!A{member_sheet_row}:F{member_sheet_row}",
-                    valueInputOption="USER_ENTERED",
-                    body=body,
-                )
-                .execute()
+            request = self.sheets.values().update(
+                spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                range=f"{getenv('GOOGLE_SHEET_ID')}!A{member_sheet_row}:F{member_sheet_row}",
+                valueInputOption="USER_ENTERED",
+                body=body,
             )
+            await asyncio.to_thread(request.execute)
         except HttpError as error:
             self.logger.error(error.content)
             return None
@@ -346,11 +338,10 @@ class GoogleSheetsClient:
         try:
             self.logger.info(f"Updating {len(update_data)} existing members")
             body = {"valueInputOption": "USER_ENTERED", "data": update_data}
-            (
-                self.sheets.values()
-                .batchUpdate(spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), body=body)
-                .execute()
+            request = self.sheets.values().batchUpdate(
+                spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"), body=body
             )
+            await asyncio.to_thread(request.execute)
         except HttpError as error:
             self.logger.error(error.content)
             return None
@@ -358,16 +349,13 @@ class GoogleSheetsClient:
         try:
             self.logger.info(f"Appending {len(append_data)} new members")
             body = {"values": append_data}
-            (
-                self.sheets.values()
-                .append(
-                    spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
-                    range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
-                    valueInputOption="USER_ENTERED",
-                    body=body,
-                )
-                .execute()
+            request = self.sheets.values().append(
+                spreadsheetId=getenv("GOOGLE_SPREADSHEET_ID"),
+                range=f"{getenv('GOOGLE_SHEET_ID')}!A1",
+                valueInputOption="USER_ENTERED",
+                body=body,
             )
+            await asyncio.to_thread(request.execute)
 
         except HttpError as error:
             self.logger.error(error.content)
