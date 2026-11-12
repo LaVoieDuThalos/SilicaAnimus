@@ -12,7 +12,8 @@ pytest_plugins = ("pytest_asyncio",)
 def make_interaction(gsheet_client, guild_member=None):
     interaction = MagicMock()
     interaction.client.parent_client.gsheet_client = gsheet_client
-    interaction.response.send_message = AsyncMock()
+    interaction.response.defer = AsyncMock()
+    interaction.followup.send = AsyncMock()
     interaction.guild.get_member_named = MagicMock(return_value=guild_member)
     return interaction
 
@@ -42,7 +43,7 @@ class TestFindDiscord:
         interaction = make_interaction(gsheet_client, guild_member=guild_member)
         await modal.on_submit(interaction)
 
-        call_kwargs = interaction.response.send_message.call_args
+        call_kwargs = interaction.followup.send.call_args
         embed = call_kwargs.kwargs["embed"]
         assert "paul_bismuth" in embed.description
         assert "paul_b" in embed.description
@@ -68,7 +69,7 @@ class TestFindDiscord:
         interaction = make_interaction(gsheet_client, guild_member=None)
         await modal.on_submit(interaction)
 
-        call_kwargs = interaction.response.send_message.call_args
+        call_kwargs = interaction.followup.send.call_args
         embed = call_kwargs.kwargs["embed"]
         assert "paul_b" in embed.description
         assert "introuvable" in embed.description
@@ -93,7 +94,7 @@ class TestFindDiscord:
         interaction = make_interaction(gsheet_client)
         await modal.on_submit(interaction)
 
-        call_kwargs = interaction.response.send_message.call_args
+        call_kwargs = interaction.followup.send.call_args
         embed = call_kwargs.kwargs["embed"]
         assert "pas de compte Discord associé" in embed.description
 
@@ -116,7 +117,7 @@ class TestFindDiscord:
         interaction = make_interaction(gsheet_client)
         await modal.on_submit(interaction)
 
-        call_kwargs = interaction.response.send_message.call_args
+        call_kwargs = interaction.followup.send.call_args
         embed = call_kwargs.kwargs["embed"]
         assert "n'a pas été trouvé" in embed.description
 

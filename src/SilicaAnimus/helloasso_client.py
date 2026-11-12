@@ -73,13 +73,21 @@ class HelloAssoClient:
             self.token_expiration_time = resp_values["expires_in"]
 
             self.refresh_token_handle = asyncio.get_running_loop().call_later(
-                self.token_expiration_time - 60, self.refresh_access_token
+                self.token_expiration_time - 60, self._schedule_refresh_access_token
             )
 
         self.logger.info("Token gotten succesfully")
         return True
 
-    def refresh_access_token(self) -> bool:
+    def _schedule_refresh_access_token(self) -> None:
+        """call_later callback: schedule the async refresh as a task.
+
+        call_later runs its callback synchronously on the event loop, so this
+        must not block; it only hands off to a task.
+        """
+        asyncio.get_running_loop().create_task(self.refresh_access_token())
+
+    async def refresh_access_token(self) -> bool:
         """Refresh the token
 
         Returns:
@@ -104,7 +112,8 @@ class HelloAssoClient:
 
         try:
             resp: HTTPResponse
-            with request.urlopen(token_request) as resp:
+            resp = await asyncio.to_thread(request.urlopen, token_request)
+            with resp:
                 if resp.status != 200:
                     self.logger.warning(f"Could not get token {resp.getcode()}")
 
@@ -113,8 +122,9 @@ class HelloAssoClient:
                 self.refresh_token = resp_values["refresh_token"]
                 self.token_expiration_time = resp_values["expires_in"]
 
-                self.refresh_token_handle = asyncio.get_event_loop().call_later(
-                    self.token_expiration_time - 60, self.refresh_access_token
+                self.refresh_token_handle = asyncio.get_running_loop().call_later(
+                    self.token_expiration_time - 60,
+                    self._schedule_refresh_access_token,
                 )
 
             self.logger.info("Access token refreshed")
@@ -128,8 +138,8 @@ class HelloAssoClient:
 
         # En cas d'échec, replanifie une tentative après 60s
         self.logger.info("Retrying token refresh in 60 seconds...")
-        self.refresh_token_handle = asyncio.get_event_loop().call_later(
-            60, self.refresh_access_token
+        self.refresh_token_handle = asyncio.get_running_loop().call_later(
+            60, self._schedule_refresh_access_token
         )
         return False
 

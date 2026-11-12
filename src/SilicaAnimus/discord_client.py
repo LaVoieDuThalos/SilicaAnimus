@@ -179,6 +179,7 @@ class CheckModal(discord.ui.Modal, title="Informations"):
     nom = discord.ui.TextInput(label="Nom", placeholder="Bismuth")
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
         nom = self.nom
         prenom = self.prenom
         ha_client = interaction.client.parent_client.helloasso_client
@@ -193,7 +194,7 @@ class CheckModal(discord.ui.Modal, title="Informations"):
         embed = MessageTemplate(
             title="Vérification du membre :", description=return_message
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
@@ -205,6 +206,7 @@ class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
     nom = discord.ui.TextInput(label="Nom", placeholder="Bismuth")
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
         gsheet_client = interaction.client.parent_client.gsheet_client
         member_info = await gsheet_client.get_member_by_name(
             first_name=self.prenom.value, last_name=self.nom.value
@@ -238,7 +240,7 @@ class FindDiscordModal(discord.ui.Modal, title="Trouver le pseudo Discord"):
             )
 
         embed = MessageTemplate(title="Pseudo Discord :", description=description)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 class UpdateMemberButtons(discord.ui.View):
@@ -257,7 +259,7 @@ class UpdateMemberButtons(discord.ui.View):
     async def button_display(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        pass
+        await interaction.response.defer()
 
     @discord.ui.button(
         label="Confirmer",
@@ -292,13 +294,14 @@ class UpdateMemberButtons(discord.ui.View):
     async def button_cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
+        await interaction.response.defer()
         for item in self.children:
             item.disabled = True
 
         self.embed.description = "COMMANDE ANNULÉE"
         self.embed.clear_fields()
 
-        await interaction.response.edit_message(embed=self.embed, view=self)
+        await interaction.edit_original_response(embed=self.embed, view=self)
 
 
 @app_commands.command(
@@ -308,13 +311,14 @@ class UpdateMemberButtons(discord.ui.View):
 )
 @app_commands.guild_only()
 async def ping(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     client = interaction.client
     embed = MessageTemplate(
         title="Pong Pong!",
         description=(f"Bot ping is {round(1000 * client.latency)} ms"),
     )
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @app_commands.command(description="L'application répète le message envoyé")
@@ -322,10 +326,11 @@ async def ping(interaction: discord.Interaction):
 @app_commands.rename(text="texte")
 @app_commands.guild_only()
 async def echo(interaction: discord.Interaction, text: str):
+    await interaction.response.defer(ephemeral=True)
     embed = MessageTemplate(
         description=text,
     )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @app_commands.command(description="Fais la listes des rôles que tu possèdes")
@@ -353,6 +358,7 @@ async def my_roles(interaction: discord.Interaction, show: bool = False):
 async def whois(
     interaction: discord.Interaction, role: discord.Role, show: bool = False
 ):
+    await interaction.response.defer(ephemeral=not show)
     embed = MessageTemplate(
         description=f"Les membres ayant le role {role.mention} sont :"
     )
@@ -365,18 +371,19 @@ async def whois(
                 [member.mention + "\n" for member in role.members[i::max_fields]]
             ),
         )
-    await interaction.response.send_message(embed=embed, ephemeral=not show)
+    await interaction.followup.send(embed=embed, ephemeral=not show)
 
 
 @app_commands.context_menu(name="Epingler")
 @app_commands.guild_only()
 async def pin(interaction: discord.Interaction, message: discord.Message):
+    await interaction.response.defer(ephemeral=True)
     try:
         await message.pin()
         embed = MessageTemplate(description="Message épinglé !")
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
     except discord.errors.HTTPException as e:
-        await interaction.response.send_message(e, ephemeral=True)
+        await interaction.followup.send(str(e), ephemeral=True)
 
 
 @app_commands.command(
@@ -474,6 +481,7 @@ async def give_role(
 )
 @app_commands.guild_only()
 async def make_membercheck(interaction: discord.Interaction, text: str = ""):
+    await interaction.response.defer()
     # remove escaping newlines
     text = "\n".join(text.split("\\n"))
     client = interaction.client
@@ -481,12 +489,13 @@ async def make_membercheck(interaction: discord.Interaction, text: str = ""):
         title="Obtenir votre role de membre sur le discord", description=text
     )
     buttons = MemberProcessView(client=client.parent_client)
-    await interaction.response.send_message(embed=embed, view=buttons)
+    await interaction.followup.send(embed=embed, view=buttons)
 
 
 @app_commands.context_menu(name="Informations utilisateur")
 @app_commands.guild_only()
 async def info(interaction: discord.Interaction, member: discord.Member):
+    await interaction.response.defer(ephemeral=True)
     client = interaction.client
     parent = client.parent_client
 
@@ -506,7 +515,7 @@ async def info(interaction: discord.Interaction, member: discord.Member):
     embed.add_field(name="Nom", value=last_name)
     embed.add_field(name="Prénom", value=first_name)
 
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @app_commands.command(
@@ -544,6 +553,7 @@ async def update_data_table(interaction: discord.Interaction):
 )
 @app_commands.guild_only()
 async def update_member_list(interaction: discord.Interaction):
+    await interaction.response.defer()
     role = interaction.guild.get_role(678922012109963294)
     client = interaction.client
     parent = client.parent_client
@@ -651,7 +661,7 @@ async def update_member_list(interaction: discord.Interaction):
         data={"to_member": to_member, "to_unmember": to_unmember},
     )
 
-    await interaction.response.send_message(embed=embed, view=buttons)
+    await interaction.followup.send(embed=embed, view=buttons)
 
 
 class ThalosBot(commands.Bot):
