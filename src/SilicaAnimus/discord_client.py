@@ -1,9 +1,11 @@
 import asyncio
 import logging
 
+import pytz
+
 logger = logging.getLogger(__name__)
 
-from datetime import datetime
+from datetime import datetime, timezone
 from os import getenv
 from typing import Optional, Union
 
@@ -672,7 +674,7 @@ class ThalosBot(commands.Bot):
     @tasks.loop(minutes=1)
     async def weekly_message(self):
         """Check every minute if we should send the scheduled message"""
-        now = datetime.now().astimezone()
+        now = datetime.now(timezone.utc).astimezone(pytz.timezone("Europe/Paris"))
 
         # Get configured time
         hour = int(getenv("WEEKLY_MESSAGE_HOUR", "22"))
